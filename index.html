@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareScreenRTC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 10px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .primary-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .primary-btn:hover {
+            background-color: #0056b3;
+        }
+        .secondary-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        .secondary-btn:hover {
+            background-color: #545b62;
+        }
+        .danger-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .danger-btn:hover {
+            background-color: #c82333;
+        }
+        .video-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        video {
+            max-width: 100%;
+            max-height: 70vh;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .qr-code canvas {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .server-info {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="ico.png" alt="ShareScreenRTC logo">
+            <h1>ShareScreenRTC</h1>
+            <p>Share and view live video streams using WebRTC</p>
+        </div>
+
+        <div class="controls">
+            <button id="shareBtn" class="primary-btn">Start Screen Share</button>
+            <button id="viewBtn" class="secondary-btn">View Stream</button>
+            <button id="stopBtn" class="danger-btn" disabled>Stop</button>
+        </div>
+
+        <div id="status" class="status info">
+            Ready to start. Click "Start Screen Share" to broadcast or "View Stream" to watch.
+        </div>
+
+        <div class="server-info">
+            <p>Server URL: <span id="serverUrl">Detecting...</span></p>
+        </div>
+
+        <div class="video-container">
+            <video id="localVideo" autoplay muted></video>
+            <video id="remoteVideo" autoplay></video>
+        </div>
+
+        <div class="qr-code">
+            <canvas id="qrCode"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Minimal QR Code generator - fallback if CDN fails
+        function generateQRCodeFallback(text) {
+            const canvas = document.getElementById('qrCode');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 200;
+            canvas.height = 50;
+            
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, 200, 50);
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('QR Code: ' + text, 100, 25);
+            ctx.fillText('(QR library not available)', 100, 40);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        let localStream = null;
+        let peerConnection = null;
+        let isSharing = false;
+        let isViewing = false;
+        let serverUrl = '';
+
+        const shareBtn = document.getElementById('shareBtn');
+        const viewBtn = document.getElementById('viewBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const status = document.getElementById('status');
+        const qrCode = document.getElementById('qrCode');
+        const serverUrlSpan = document.getElementById('serverUrl');
+
+        // Get server URL
+        async function getServerUrl() {
+            try {
+                const response = await fetch('/myip');
+                const ip = await response.text();
+                serverUrl = `http://${ip}:5000`;
+                serverUrlSpan.textContent = serverUrl;
+                
+                // Generate QR code for the current page URL
+                const currentUrl = `${serverUrl}/`;
+                if (typeof QRCode !== 'undefined') {
+                    QRCode.toCanvas(qrCode, currentUrl, { width: 200 }, function (error) {
+                        if (error) console.error(error);
+                    });
+                } else {
+                    generateQRCodeFallback(currentUrl);
+                }
+            } catch (error) {
+                console.error('Failed to get server URL:', error);
+                serverUrl = window.location.origin;
+                serverUrlSpan.textContent = serverUrl;
+            }
+        }
+
+        // Initialize WebRTC configuration
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log('ICE candidate:', event.candidate);
+                }
+            };
+
+            peerConnection.ontrack = (event) => {
+                console.log('Received remote stream');
+                remoteVideo.srcObject = event.streams[0];
+                remoteVideo.style.display = 'block';
+                localVideo.style.display = 'none';
+                updateStatus('Connected! Viewing remote stream.', 'success');
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnection.connectionState);
+                if (peerConnection.connectionState === 'connected') {
+                    updateStatus('WebRTC connection established!', 'success');
+                } else if (peerConnection.connectionState === 'failed') {
+                    updateStatus('Connection failed. Please try again.', 'error');
+                }
+            };
+
+            return peerConnection;
+        }
+
+        async function startScreenShare() {
+            try {
+                updateStatus('Requesting screen share permission...', 'info');
+                
+                localStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true
+                });
+
+                localVideo.srcObject = localStream;
+                localVideo.style.display = 'block';
+                remoteVideo.style.display = 'none';
+
+                peerConnection = createPeerConnection();
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // Send offer to server
+                await fetch('/offer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(offer)
+                });
+
+                updateStatus('Screen sharing started! Waiting for viewer...', 'success');
+                isSharing = true;
+                shareBtn.disabled = true;
+                viewBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                // Poll for answer
+                pollForAnswer();
+
+                // Handle stream end
+                localStream.getVideoTracks()[0].onended = () => {
+                    stopSharing();
+                };
+
+            } catch (error) {
+                console.error('Error starting screen share:', error);
+                updateStatus('Failed to start screen sharing. Please try again.', 'error');
+            }
+        }
+
+        async function pollForAnswer() {
+            if (!isSharing) return;
+
+            try {
+                const response = await fetch('/get_answer');
+                const answer = await response.json();
+
+                if (answer && answer.type === 'answer') {
+                    await peerConnection.setRemoteDescription(answer);
+                    updateStatus('Viewer connected! Sharing screen...', 'success');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error polling for answer:', error);
+            }
+
+            // Continue polling
+            setTimeout(pollForAnswer, 1000);
+        }
+
+        async function startViewing() {
+            try {
+                updateStatus('Looking for screen share...', 'info');
+
+                peerConnection = createPeerConnection();
+
+                // Poll for offer
+                const offer = await pollForOffer();
+                if (!offer) {
+                    updateStatus('No screen share available. Please try again.', 'error');
+                    return;
+                }
+
+                await peerConnection.setRemoteDescription(offer);
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                // Send answer to server
+                await fetch('/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(answer)
+                });
+
+                updateStatus('Connecting to stream...', 'info');
+                isViewing = true;
+                shareBtn.disabled = true;
+                viewBtn.disabled = true;
+                stopBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error starting viewing:', error);
+                updateStatus('Failed to connect to stream. Please try again.', 'error');
+            }
+        }
+
+        async function pollForOffer() {
+            for (let i = 0; i < 10; i++) {
+                try {
+                    const response = await fetch('/get_offer');
+                    const offer = await response.json();
+
+                    if (offer && offer.type === 'offer') {
+                        return offer;
+                    }
+                } catch (error) {
+                    console.error('Error polling for offer:', error);
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            return null;
+        }
+
+        function stopSharing() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+
+            localVideo.srcObject = null;
+            remoteVideo.srcObject = null;
+            localVideo.style.display = 'none';
+            remoteVideo.style.display = 'none';
+
+            isSharing = false;
+            isViewing = false;
+
+            shareBtn.disabled = false;
+            viewBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            updateStatus('Stopped. Ready to start again.', 'info');
+        }
+
+        // Event listeners
+        shareBtn.addEventListener('click', startScreenShare);
+        viewBtn.addEventListener('click', startViewing);
+        stopBtn.addEventListener('click', stopSharing);
+
+        // Initialize
+        getServerUrl();
+    </script>
+</body>
+</html>
