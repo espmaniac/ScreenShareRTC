@@ -169,11 +169,11 @@
     </div>
   </div>
   <script>
-let SERVER = "https://127.0.0.1:5000";
+let SERVER = "http://127.0.0.1:5000";
 let SERVER_IP = "127.0.0.1";
 let answerPollTimer = null;
 
-fetch("https://127.0.0.1:5000/myip")
+fetch("http://127.0.0.1:5000/myip")
   .then(response => response.text())
   .then(ip => {
     SERVER_IP = ip.trim();
