@@ -237,8 +237,9 @@ function showQROffer() {
   qrOffer.classList.add('visible');
   while (qrbox.firstChild) qrbox.removeChild(qrbox.firstChild);
   qrError.classList.add('hidden'); qrError.textContent = '';
-  const baseUrl = `${window.location.href}`;
+  const baseUrl = `http://${SERVER_IP}`;
   const qrUrl = `${baseUrl}?type=view&ip=${SERVER_IP}`;
+
   try {
     var qr = qrcode(0, 'L');
     qr.addData(qrUrl); qr.make();
