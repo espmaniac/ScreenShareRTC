@@ -169,11 +169,11 @@
     </div>
   </div>
   <script>
-let SERVER = "http://127.0.0.1:5000";
+let SERVER = "https://127.0.0.1:5000";
 let SERVER_IP = "127.0.0.1";
 let answerPollTimer = null;
 
-fetch("http://127.0.0.1:5000/myip")
+fetch("https://127.0.0.1:5000/myip")
   .then(response => response.text())
   .then(ip => {
     SERVER_IP = ip.trim();
@@ -504,7 +504,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const qrIp = urlParams.get('ip');
   if (qrIp && location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
-    SERVER = "http://" + qrIp + ":5000";
+    SERVER = "https://" + qrIp + ":5000";
     const h2 = document.querySelector('h2');
     if (h2) {
       let note = document.createElement('div');
