@@ -1,407 +1,537 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareScreenRTC</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .header img {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 10px;
-        }
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .primary-btn {
-            background-color: #007bff;
-            color: white;
-        }
-        .primary-btn:hover {
-            background-color: #0056b3;
-        }
-        .secondary-btn {
-            background-color: #6c757d;
-            color: white;
-        }
-        .secondary-btn:hover {
-            background-color: #545b62;
-        }
-        .danger-btn {
-            background-color: #dc3545;
-            color: white;
-        }
-        .danger-btn:hover {
-            background-color: #c82333;
-        }
-        .video-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        video {
-            max-width: 100%;
-            max-height: 70vh;
-            border: 2px solid #007bff;
-            border-radius: 5px;
-        }
-        .status {
-            text-align: center;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        .status.info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .qr-code {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .qr-code canvas {
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .server-info {
-            text-align: center;
-            margin: 20px 0;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            border: 1px solid #e9ecef;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>ShareScreenRTC</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="ico.png">
+  <link rel="icon" type="image/svg+xml" href="ico.svg">
+  <link rel="icon" type="image/x-icon" href="ico.ico">
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; width: 100vw; min-height: 100vh; box-sizing: border-box; }
+    body { min-height: 100vh; width: 100vw; background-color: #2b3137; display: flex; align-items: center; justify-content: center; }
+    .center-block {
+      background: #fff;
+      border-radius: 22px;
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+      padding: 2.5em 2.2em 2em 2.2em;
+      max-width: 720px;
+      width: 92vw;
+      min-width: 320px;
+      margin: 2em auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid rgba(200,200,200,0.18);
+      box-sizing: border-box;
+    }
+    h2 { text-align: center; margin-bottom: 1.4em; font-weight: 700; letter-spacing: 0.02em; color: #444; font-size: 1.4em; }
+    button { margin: 0.2em 0.5em 0.2em 0; padding: 0.55em 1.2em; border-radius: 7px; border: none; background: #f3f3f3; color: #333; font-weight: 600; font-size: 1em; cursor: pointer; box-shadow: 0 2px 8px rgba(250,218,97,0.07); transition: background 0.18s, color 0.18s, box-shadow 0.18s; outline: none;}
+    button:hover, button:focus { background: rgb(255, 145, 136, 0.15); color: #d82a72; box-shadow: 0 4px 18px rgba(255,90,205,0.12);}
+    .hidden { display: none; }
+    #sdp-section, #manual-section, #answer-section { margin: 1.1em 0 0.7em 0; width: 100%;}
+    textarea, input[type="text"] { width: 100%; font-family: monospace; font-size: 0.98em; border-radius: 6px; border: 1.5px solid #eee; padding: 0.5em; margin: 0.2em 0 0.7em 0; box-sizing: border-box; transition: border 0.18s, box-shadow 0.18s; background: #faf9fd; resize: vertical; min-height: 2.5em; outline: none; }
+    textarea:focus, input[type="text"]:focus { border: 1.5px solid #ff90cd; background: #fff; box-shadow: 0 2px 12px rgba(255,90,205,0.07);}
+    #qr-offer {
+      margin: 1.2em 0 1.1em 0;
+      padding: 0.7em;
+      background: #fff;
+      border-radius: 12px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 2px 18px 0 rgba(255, 90, 205, 0.07);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #qr-offer.visible { display: flex; }
+    #qrbox {
+      width: 60%;
+      height: 60%;
+      max-width: 320px;
+      max-height: 320px;
+      min-width: 120px;
+      min-height: 120px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+    }
+    #qrbox img, #qrbox canvas {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+    #qr-offer .error { color: #d33; font-weight: bold; margin: 1em 0 0.5em 0; text-align: center; font-size: 1.05em;}
+    #qr-offer .info { color: #555; font-size: 0.92em; margin-top: 0.6em;}
+    #datachannel-log { min-height: 6em; max-height: 12em; margin-bottom: 0.6em;}
+    .mode-buttons { width: 100%; display: flex; justify-content: center; gap: 0.8em; margin-bottom: 1.3em;}
+    .view-block, .cast-block { width: 100%; }
+    #answer-section { margin-bottom: 1em; }
+    #video-local, #video-remote {
+      width: 100%;
+      max-width: 640px;
+      margin: 1em auto 0.5em auto;
+      background: #000;
+      border-radius: 10px;
+      display: none;
+    }
+    #video-local.active, #video-remote.active {
+      display: block;
+    }
+    .center-block.fullscreen {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+    .center-block.fullscreen > *:not(.mode-buttons):not(#video-local):not(#video-remote) {
+      display: none !important;
+    }
+    .center-block.fullscreen .mode-buttons {
+      display: flex !important;
+      flex-direction: column;
+      gap: 1.8em;
+      justify-content: center;
+      width: 100vw;
+      align-items: center;
+    }
+    @media (max-width:600px) {
+      .center-block { padding: 1.2em 0.5em 1.2em 0.5em; max-width: 98vw;}
+      h2 { font-size: 1em;}
+      .mode-buttons { flex-direction: column; gap: 0.3em; }
+      #qrbox {
+        width: 90%;
+        height: 40vw;
+        max-width: 95vw;
+        max-height: 95vw;
+        min-width: 80px;
+        min-height: 80px;
+      }
+      #video-local, #video-remote {
+        max-width: 97vw;
+      }
+      .center-block.fullscreen .mode-buttons { width: 100vw; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <img src="ico.png" alt="ShareScreenRTC logo">
-            <h1>ShareScreenRTC</h1>
-            <p>Share and view live video streams using WebRTC</p>
-        </div>
-
-        <div class="controls">
-            <button id="shareBtn" class="primary-btn">Start Screen Share</button>
-            <button id="viewBtn" class="secondary-btn">View Stream</button>
-            <button id="stopBtn" class="danger-btn" disabled>Stop</button>
-        </div>
-
-        <div id="status" class="status info">
-            Ready to start. Click "Start Screen Share" to broadcast or "View Stream" to watch.
-        </div>
-
-        <div class="server-info">
-            <p>Server URL: <span id="serverUrl">Detecting...</span></p>
-        </div>
-
-        <div class="video-container">
-            <video id="localVideo" autoplay muted></video>
-            <video id="remoteVideo" autoplay></video>
-        </div>
-
-        <div class="qr-code">
-            <canvas id="qrCode"></canvas>
-        </div>
+  <div class="center-block">
+    <h2>ShareScreenRTC</h2>
+    <div class="mode-buttons">
+      <button id="btn-cast">Start Broadcast</button>
+      <button id="btn-view">View Broadcast</button>
     </div>
+    <video id="video-local" muted playsinline controls></video>
+    <video id="video-remote" playsinline controls></video>
+    <div id="qr-offer">
+      <b>QR code for sharing Offer (opens site with SDP):</b>
+      <div id="qrbox"></div>
+      <div id="qr-error" class="error hidden"></div>
+      <div class="info">Scan the QR code on your phone — the site will open and SDP will be handled automatically</div>
+    </div>
+    <div class="cast-block hidden" id="cast-block">
+      <button id="manual-answer">Enter Answer Manually</button>
+      <div id="answer-section" class="hidden">
+        <b>Answer from server:</b>
+        <textarea id="answer-text" rows="8" readonly></textarea>
+        <button id="copy-answer">Copy</button>
+      </div>
+    </div>
+    <div class="view-block hidden" id="view-block">
+      <button id="get-offer">Load Offer from server</button>
+      <button id="manual-offer">Enter Offer Manually</button>
+    </div>
+    <div id="sdp-section" class="hidden">
+      <b>SDP (Offer/Answer):</b><br>
+      <textarea id="sdp-text" rows="8" readonly></textarea><br>
+      <button id="copy-sdp">Copy</button>
+    </div>
+    <div id="manual-section" class="hidden">
+      <b>Paste Offer/Answer below:</b><br>
+      <textarea id="manual-sdp" rows="8" placeholder="Paste Offer or Answer here"></textarea><br>
+      <button id="manual-process">Process</button>
+    </div>
+    <div style="width:100%;">
+      <textarea id="datachannel-log" rows="8" placeholder="Connection log..."></textarea>
+    </div>
+  </div>
+  <script>
+let SERVER = "http://127.0.0.1:5000";
+let SERVER_IP = "127.0.0.1";
+let answerPollTimer = null;
 
-    <script>
-        // Minimal QR Code generator - fallback if CDN fails
-        function generateQRCodeFallback(text) {
-            const canvas = document.getElementById('qrCode');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 200;
-            canvas.height = 50;
-            
-            ctx.fillStyle = '#f8f9fa';
-            ctx.fillRect(0, 0, 200, 50);
-            ctx.fillStyle = '#000';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('QR Code: ' + text, 100, 25);
-            ctx.fillText('(QR library not available)', 100, 40);
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script>
-        let localStream = null;
-        let peerConnection = null;
-        let isSharing = false;
-        let isViewing = false;
-        let serverUrl = '';
+fetch("http://127.0.0.1:5000/myip")
+  .then(response => response.text())
+  .then(ip => {
+    SERVER_IP = ip.trim();
+    const h2 = document.querySelector('h2');
+    if (h2) {
+      h2.insertAdjacentHTML('afterend', `<div style="margin:0.5em 0 1.2em 0;font-size:0.93em;color:#666;">Server IP: <b>${ip}</b></div>`);
+    }
+  })
+  .catch(()=>{});
 
-        const shareBtn = document.getElementById('shareBtn');
-        const viewBtn = document.getElementById('viewBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
-        const status = document.getElementById('status');
-        const qrCode = document.getElementById('qrCode');
-        const serverUrlSpan = document.getElementById('serverUrl');
+let pc;
+let dataChannel;
+let localStream = null;
+const btnCast = document.getElementById("btn-cast");
+const btnView = document.getElementById("btn-view");
+const castBlock = document.getElementById("cast-block");
+const viewBlock = document.getElementById("view-block");
+const btnGetOffer = document.getElementById("get-offer");
+const btnManualOffer = document.getElementById("manual-offer");
+const btnManualAnswer = document.getElementById("manual-answer");
+const sdpSection = document.getElementById('sdp-section');
+const sdpText = document.getElementById('sdp-text');
+const copySdpBtn = document.getElementById('copy-sdp');
+const manualSection = document.getElementById('manual-section');
+const manualSdp = document.getElementById('manual-sdp');
+const manualProcess = document.getElementById('manual-process');
+const qrOffer = document.getElementById('qr-offer');
+const qrbox = document.getElementById('qrbox');
+const qrError = document.getElementById('qr-error');
+const logArea = document.getElementById("datachannel-log");
+const answerSection = document.getElementById("answer-section");
+const answerText = document.getElementById("answer-text");
+const copyAnswerBtn = document.getElementById("copy-answer");
+const videoLocal = document.getElementById("video-local");
+const videoRemote = document.getElementById("video-remote");
+const centerBlock = document.querySelector(".center-block");
 
-        // Get server URL
-        async function getServerUrl() {
-            try {
-                const response = await fetch('/myip');
-                const ip = await response.text();
-                serverUrl = `http://${ip}:5000`;
-                serverUrlSpan.textContent = serverUrl;
-                
-                // Generate QR code for the current page URL
-                const currentUrl = `${serverUrl}/`;
-                if (typeof QRCode !== 'undefined') {
-                    QRCode.toCanvas(qrCode, currentUrl, { width: 200 }, function (error) {
-                        if (error) console.error(error);
-                    });
-                } else {
-                    generateQRCodeFallback(currentUrl);
-                }
-            } catch (error) {
-                console.error('Failed to get server URL:', error);
-                serverUrl = window.location.origin;
-                serverUrlSpan.textContent = serverUrl;
-            }
-        }
+function log(msg) {
+  logArea.value += msg + "\n";
+  logArea.scrollTop = logArea.scrollHeight;
+}
+function showSDP(sdp) {
+  sdpSection.classList.remove('hidden');
+  sdpText.value = sdp;
+}
+function hideSDP() {
+  sdpSection.classList.add('hidden');
+  sdpText.value = "";
+}
+function showManual() { manualSection.classList.remove('hidden'); manualSdp.value = ''; }
+function hideManual() { manualSection.classList.add('hidden'); manualSdp.value = ''; }
+function hideAllSignalButtons() {
+  btnManualAnswer.classList.add('hidden');
+  btnGetOffer.classList.add('hidden');
+  btnManualOffer.classList.add('hidden');
+}
+function showManualAnswerButton() { btnManualAnswer.classList.remove('hidden'); }
+function showCastBlock() { castBlock.classList.remove("hidden"); viewBlock.classList.add("hidden"); }
+function showViewBlock() { castBlock.classList.add("hidden"); viewBlock.classList.remove("hidden"); }
+function showQROffer() {
+  qrOffer.classList.add('visible');
+  while (qrbox.firstChild) qrbox.removeChild(qrbox.firstChild);
+  qrError.classList.add('hidden'); qrError.textContent = '';
+  const baseUrl = `http://${SERVER_IP}${window.location.pathname}`;
+  const qrUrl = `${baseUrl}?type=view&ip=${SERVER_IP}`;
+  try {
+    var qr = qrcode(0, 'L');
+    qr.addData(qrUrl); qr.make();
+    var qrImg = qr.createImgTag(6, 0);
+    qrbox.innerHTML = qrImg;
+  } catch(e) {
+    qrError.textContent = "QR generation error!";
+    qrError.classList.remove('hidden');
+  }
+}
+function hideQROffer() {
+  qrOffer.classList.remove('visible');
+  while (qrbox.firstChild) qrbox.removeChild(qrbox.firstChild);
+  qrError.classList.add('hidden'); qrError.textContent = '';
+}
+function createPeerConnection(isOfferer, streamForCast=null) {
+  pc = new RTCPeerConnection();
+  pc.onicecandidate = e => {
+    if (!e.candidate) {
+      const sdp = JSON.stringify(pc.localDescription);
+      showSDP(sdp);
+      if (isOfferer) {
+        sendOfferToServer(sdp);
+        showManualAnswerButton();
+        showQROffer();
+        startAnswerPolling();
+        btnView.classList.add('hidden');
+      } else {
+        btnManualAnswer.classList.add('hidden');
+        hideQROffer();
+      }
+    }
+  };
+  if (isOfferer && streamForCast) {
+    streamForCast.getTracks().forEach(track => {
+      pc.addTrack(track, streamForCast);
+    });
+    videoLocal.srcObject = streamForCast;
+    videoLocal.classList.add('active');
+  } else {
+    pc.ontrack = (event) => {
+      if (event.streams && event.streams[0]) {
+        videoRemote.srcObject = event.streams[0];
+        videoRemote.classList.add('active');
+      }
+    };
+    hideQROffer();
+  }
+  if (isOfferer) {
+    dataChannel = pc.createDataChannel("data");
+    setupDataChannel();
+  } else {
+    pc.ondatachannel = event => {
+      dataChannel = event.channel;
+      setupDataChannel();
+    };
+  }
+}
+async function sendOfferToServer(sdp) {
+  try {
+    await fetch(SERVER + "/offer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: sdp
+    });
+    log("Offer sent to server!");
+  } catch (e) {
+    alert("Error sending offer: " + e);
+  }
+}
+async function sendAnswerToServer(sdp) {
+  try {
+    await fetch(SERVER + "/answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: sdp
+    });
+    log("Answer sent to server!");
+  } catch (e) {
+    log(e);
+    alert("Error sending answer: " + e);
+  }
+}
+function setupDataChannel() {
+  dataChannel.onopen = () => {
+    log("DataChannel opened!");
+    hideSDP();
+    hideAllSignalButtons();
+    hideQROffer();
+    hideAnswerSection();
+    stopAnswerPolling();
+    btnCast.classList.add("hidden");
+    btnView.classList.add("hidden");
+    centerBlock.classList.add('fullscreen');
+  };
+  dataChannel.onmessage = e => log("Received: " + e.data);
+}
+function showAnswerSection(answer) {
+  answerSection.classList.remove("hidden");
+  answerText.value = JSON.stringify(answer, null, 2);
+}
+function hideAnswerSection() {
+  answerSection.classList.add("hidden");
+  answerText.value = "";
+}
+function startAnswerPolling() {
+  stopAnswerPolling();
+  answerSection.classList.add("hidden");
+  answerText.value = "";
+  answerPollTimer = setInterval(async () => {
+    try {
+      let resp = await fetch(SERVER + "/get_answer");
+      let answer = await resp.json();
+      if (answer && answer.type) {
+        log("Answer received automatically!");
+        showAnswerSection(answer);
+        await handleAnswer(answer);
+        stopAnswerPolling();
+      }
+    } catch (e) {}
+  }, 2000);
+}
+function stopAnswerPolling() {
+  if (answerPollTimer) {
+    clearInterval(answerPollTimer);
+    answerPollTimer = null;
+  }
+}
+btnCast.onclick = async () => {
+  showCastBlock();
+  btnView.classList.add("hidden");
+  hideSDP(); hideManual(); hideQROffer(); hideAnswerSection();
+  try {
+    localStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: { ideal: 60, max: 60 } },
+      audio: true
+    });
+  } catch (e) {
+    alert("Failed to capture tab/screen: " + e);
+    return;
+  }
+  createPeerConnection(true, localStream);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  showManualAnswerButton();
+  videoLocal.srcObject = localStream;
+  videoLocal.classList.add('active');
+  videoRemote.classList.remove('active');
+  videoRemote.srcObject = null;
+  setTimeout(()=>{
+    const track = localStream.getVideoTracks()[0];
+    if (track) log("Actual FPS: " + (track.getSettings().frameRate || "(unknown)"));
+  }, 500);
+};
+btnView.onclick = () => {
+  showViewBlock();
+  btnView.classList.remove("hidden");
+  btnManualAnswer.classList.add("hidden");
+  hideSDP(); hideManual(); hideQROffer(); hideAnswerSection();
+  videoLocal.classList.remove('active');
+  videoLocal.srcObject = null;
+  videoRemote.classList.add('active');
+};
+btnGetOffer.onclick = async () => {
+  hideSDP(); hideManual(); hideQROffer(); hideAnswerSection();
+  try {
+    let resp = await fetch(SERVER + "/get_offer");
+    let offer = await resp.json();
+    if (!offer || !offer.type) {
+      alert("No Offer on server");
+      return;
+    }
+    showManual();
+    manualSdp.value = JSON.stringify(offer, null, 2);
+    setTimeout(() => manualProcess.click(), 100);
+    manualProcess.onclick = async () => {
+      try {
+        await handleOffer(offer);
+        hideManual();
+        hideAllSignalButtons();
+        hideQROffer();
+      } catch (e) {
+        alert("SDP error: " + e);
+      }
+    };
+    hideAllSignalButtons();
+    hideQROffer();
+  } catch (e) {
+    alert("Error loading offer: " + e);
+  }
+};
+btnManualOffer.onclick = () => {
+  hideSDP(); showManual(); hideQROffer(); hideAnswerSection();
+  manualProcess.onclick = async () => {
+    try {
+      const json = JSON.parse(manualSdp.value.trim());
+      await handleOffer(json);
+      hideManual();
+      hideAllSignalButtons();
+      hideQROffer();
+    } catch (e) {
+      alert("SDP error: " + e);
+    }
+  };
+  hideAllSignalButtons();
+  hideQROffer();
+};
+btnManualAnswer.onclick = () => {
+  hideSDP(); showManual(); hideQROffer(); hideAnswerSection();
+  manualProcess.onclick = async () => {
+    try {
+      const json = JSON.parse(manualSdp.value.trim());
+      await handleAnswer(json);
+      hideManual();
+      btnManualAnswer.classList.add('hidden');
+      hideQROffer();
+      hideAnswerSection();
+      stopAnswerPolling();
+    } catch (e) {
+      alert("SDP error: " + e);
+    }
+  };
+};
+copySdpBtn.onclick = () => {
+  const sdp = sdpText.value;
+  navigator.clipboard.writeText(sdp).then(() => alert("Copied!"));
+};
+copyAnswerBtn.onclick = () => {
+  const sdp = answerText.value;
+  if (sdp) navigator.clipboard.writeText(sdp).then(() => alert("Copied!"));
+};
+async function handleOffer(offerSDP) {
+  createPeerConnection(false);
+  await pc.setRemoteDescription(offerSDP);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  pc.onicecandidate = async e => {
+    if (!e.candidate) {
+      const sdp = JSON.stringify(pc.localDescription);
+      showSDP(sdp);
+      await sendAnswerToServer(sdp);
+    }
+  };
+  btnManualAnswer.classList.add('hidden');
+  hideQROffer();
+  hideAnswerSection();
+  stopAnswerPolling();
+  videoLocal.classList.remove('active');
+  videoLocal.srcObject = null;
+  videoRemote.classList.add('active');
+}
+async function handleAnswer(answerSDP) {
+  await pc.setRemoteDescription(answerSDP);
+  btnManualAnswer.classList.add('hidden');
+  log("Answer set!");
+  hideQROffer();
+  hideAnswerSection();
+  stopAnswerPolling();
+}
+window.addEventListener('beforeunload', stopAnswerPolling);
 
-        // Initialize WebRTC configuration
-        const rtcConfig = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
-
-        function updateStatus(message, type = 'info') {
-            status.textContent = message;
-            status.className = `status ${type}`;
-        }
-
-        function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(rtcConfig);
-
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    console.log('ICE candidate:', event.candidate);
-                }
-            };
-
-            peerConnection.ontrack = (event) => {
-                console.log('Received remote stream');
-                remoteVideo.srcObject = event.streams[0];
-                remoteVideo.style.display = 'block';
-                localVideo.style.display = 'none';
-                updateStatus('Connected! Viewing remote stream.', 'success');
-            };
-
-            peerConnection.onconnectionstatechange = () => {
-                console.log('Connection state:', peerConnection.connectionState);
-                if (peerConnection.connectionState === 'connected') {
-                    updateStatus('WebRTC connection established!', 'success');
-                } else if (peerConnection.connectionState === 'failed') {
-                    updateStatus('Connection failed. Please try again.', 'error');
-                }
-            };
-
-            return peerConnection;
-        }
-
-        async function startScreenShare() {
-            try {
-                updateStatus('Requesting screen share permission...', 'info');
-                
-                localStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                    audio: true
-                });
-
-                localVideo.srcObject = localStream;
-                localVideo.style.display = 'block';
-                remoteVideo.style.display = 'none';
-
-                peerConnection = createPeerConnection();
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-
-                // Send offer to server
-                await fetch('/offer', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(offer)
-                });
-
-                updateStatus('Screen sharing started! Waiting for viewer...', 'success');
-                isSharing = true;
-                shareBtn.disabled = true;
-                viewBtn.disabled = true;
-                stopBtn.disabled = false;
-
-                // Poll for answer
-                pollForAnswer();
-
-                // Handle stream end
-                localStream.getVideoTracks()[0].onended = () => {
-                    stopSharing();
-                };
-
-            } catch (error) {
-                console.error('Error starting screen share:', error);
-                updateStatus('Failed to start screen sharing. Please try again.', 'error');
-            }
-        }
-
-        async function pollForAnswer() {
-            if (!isSharing) return;
-
-            try {
-                const response = await fetch('/get_answer');
-                const answer = await response.json();
-
-                if (answer && answer.type === 'answer') {
-                    await peerConnection.setRemoteDescription(answer);
-                    updateStatus('Viewer connected! Sharing screen...', 'success');
-                    return;
-                }
-            } catch (error) {
-                console.error('Error polling for answer:', error);
-            }
-
-            // Continue polling
-            setTimeout(pollForAnswer, 1000);
-        }
-
-        async function startViewing() {
-            try {
-                updateStatus('Looking for screen share...', 'info');
-
-                peerConnection = createPeerConnection();
-
-                // Poll for offer
-                const offer = await pollForOffer();
-                if (!offer) {
-                    updateStatus('No screen share available. Please try again.', 'error');
-                    return;
-                }
-
-                await peerConnection.setRemoteDescription(offer);
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-
-                // Send answer to server
-                await fetch('/answer', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(answer)
-                });
-
-                updateStatus('Connecting to stream...', 'info');
-                isViewing = true;
-                shareBtn.disabled = true;
-                viewBtn.disabled = true;
-                stopBtn.disabled = false;
-
-            } catch (error) {
-                console.error('Error starting viewing:', error);
-                updateStatus('Failed to connect to stream. Please try again.', 'error');
-            }
-        }
-
-        async function pollForOffer() {
-            for (let i = 0; i < 10; i++) {
-                try {
-                    const response = await fetch('/get_offer');
-                    const offer = await response.json();
-
-                    if (offer && offer.type === 'offer') {
-                        return offer;
-                    }
-                } catch (error) {
-                    console.error('Error polling for offer:', error);
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-            return null;
-        }
-
-        function stopSharing() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
-
-            localVideo.srcObject = null;
-            remoteVideo.srcObject = null;
-            localVideo.style.display = 'none';
-            remoteVideo.style.display = 'none';
-
-            isSharing = false;
-            isViewing = false;
-
-            shareBtn.disabled = false;
-            viewBtn.disabled = false;
-            stopBtn.disabled = true;
-
-            updateStatus('Stopped. Ready to start again.', 'info');
-        }
-
-        // Event listeners
-        shareBtn.addEventListener('click', startScreenShare);
-        viewBtn.addEventListener('click', startViewing);
-        stopBtn.addEventListener('click', stopSharing);
-
-        // Initialize
-        getServerUrl();
-    </script>
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const qrIp = urlParams.get('ip');
+  if (qrIp && location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
+    SERVER = "http://" + qrIp + ":5000";
+    const h2 = document.querySelector('h2');
+    if (h2) {
+      let note = document.createElement('div');
+      note.id = 'ip-from-qr';
+      note.style = "margin:0.2em 0 0.9em 0;font-size:0.92em;color:#387;";
+      h2.insertAdjacentElement('afterend', note);
+      note.innerHTML = `Server IP from QR: <b>${qrIp}</b>`;
+    }
+  }
+  if (urlParams.get('type') === 'view') {
+    btnView.click();
+    setTimeout(() => btnGetOffer.click(), 400);
+    return;
+  }
+  const sdp = urlParams.get('sdp');
+  if (sdp) {
+    try {
+      const sdpObj = JSON.parse(decodeURIComponent(sdp));
+      handleOffer(sdpObj);
+      log("SDP from QR code handled automatically!");
+    } catch (e) {
+      manualSection.classList.remove('hidden');
+      manualSdp.value = decodeURIComponent(sdp);
+      log("SDP found in URL, please paste or confirm processing.");
+    }
+  }
+});
+  </script>
 </body>
 </html>
