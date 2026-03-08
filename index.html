@@ -69,9 +69,6 @@
       <div class="label">Site code:</div>
       <input id="site-code" type="text" readonly>
 
-      <div class="label">WebRTC response code (6-8 chars):</div>
-      <input id="response-code" type="text" maxlength="8" placeholder="Type only 6-8 chars from phone">
-
       <div class="label">Compact response token (from phone):</div>
       <textarea id="response-token" rows="4" placeholder="Type/paste compact token"></textarea>
 
@@ -82,8 +79,6 @@
     </div>
 
     <div id="viewer-panel" class="full-width hidden">
-      <div class="label">Answer code:</div>
-      <input id="viewer-response-code" type="text" readonly>
       <div class="label">Answer token:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
       <button id="copy-response-token">Copy answer token</button>
@@ -104,12 +99,10 @@
     const qrboxOffer = document.getElementById('qrbox-offer');
     const qrStatus = document.getElementById('qr-status');
     const siteCodeInput = document.getElementById('site-code');
-    const responseCodeInput = document.getElementById('response-code');
     const responseTokenInput = document.getElementById('response-token');
     const applyAnswerBtn = document.getElementById('apply-answer');
     const broadcasterControls = document.getElementById('broadcaster-controls');
     const viewerPanel = document.getElementById('viewer-panel');
-    const viewerResponseCode = document.getElementById('viewer-response-code');
     const viewerResponseToken = document.getElementById('viewer-response-token');
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
@@ -151,15 +144,6 @@
         return false;
       }
     }
-
-    async function shortCodeFromString(value, length = 6) {
-      const data = new TextEncoder().encode(value);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      const bytes = new Uint8Array(hash).slice(0, length);
-      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      return [...bytes].map(b => alphabet[b % alphabet.length]).join('');
-    }
-
     function b64urlEncode(bytes) {
       let binary = '';
       bytes.forEach((b) => { binary += String.fromCharCode(b); });
@@ -294,7 +278,7 @@
 
     function buildMobileViewerDataUrl(code, offerObj) {
       const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
-      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><style>body{margin:0;background:#111;color:#eee;font-family:system-ui;padding:10px}video{width:100%;max-height:56vh;background:#000;border-radius:8px}input,textarea{width:100%;box-sizing:border-box;font-family:monospace;margin-top:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:6px;padding:8px}small{color:#bbb}</style><video id=v autoplay playsinline controls></video><div><small>Answer code</small><input id=c readonly></div><div><small>Answer token</small><textarea id=t rows=6 readonly></textarea></div><script>(async()=>{const C=${JSON.stringify(code)};const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0])document.getElementById('v').srcObject=e.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const base='P'+e(JSON.stringify({c:C,a:s}));const r=base.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6).padEnd(6,'A');const token='P'+e(JSON.stringify({c:C,r:r,a:s}));document.getElementById('c').value=r;document.getElementById('t').value=token;})();<\/script>`;
+      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><style>body{margin:0;background:#111;color:#eee;font-family:system-ui;padding:10px}video{width:100%;max-height:56vh;background:#000;border-radius:8px}input,textarea{width:100%;box-sizing:border-box;font-family:monospace;margin-top:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:6px;padding:8px}small{color:#bbb}</style><video id=v autoplay playsinline controls></video><div><small>Answer token</small><textarea id=t rows=6 readonly></textarea></div><script>(async()=>{const C=${JSON.stringify(code)};const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0])document.getElementById('v').srcObject=e.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const token='P'+e(JSON.stringify({c:C,a:s}));document.getElementById('t').value=token;})();<\/script>`;
       return `data:text/html;base64,${btoa(unescape(encodeURIComponent(mobileHtml)))}`;
     }
 
@@ -333,17 +317,13 @@
           } else {
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const answerObj = { type: pc.localDescription.type, sdp: slimAnswerSdp };
-            const answerStr = JSON.stringify(answerObj);
-            const responseCode = await shortCodeFromString(answerStr, 6);
-            const payload = { c: currentSiteCode, r: responseCode, a: answerObj.sdp };
+            const payload = { c: currentSiteCode, a: answerObj.sdp };
             const token = await encodeCompactPayload(payload);
 
             viewerPanel.classList.remove('hidden');
-            viewerResponseCode.value = responseCode;
             viewerResponseToken.value = token;
 
-            log(`Viewer response code: ${responseCode}`);
-            log('Share only code + compact token with broadcaster.');
+            log('Viewer answer token is ready. Share token with broadcaster.');
           }
         }
       };
@@ -425,12 +405,6 @@
         return;
       }
 
-      const typedCode = responseCodeInput.value.trim().toUpperCase();
-      if (typedCode.length < 6 || typedCode.length > 8) {
-        alert('Type only the 6-8 character response code.');
-        return;
-      }
-
       const token = responseTokenInput.value.trim();
       if (!token) {
         alert('Paste/enter compact response token.');
@@ -451,10 +425,6 @@
       }
       if (payload.c !== currentSiteCode) {
         alert('Site code mismatch.');
-        return;
-      }
-      if ((payload.r || '').toUpperCase() !== typedCode) {
-        alert('Response code mismatch.');
         return;
       }
 

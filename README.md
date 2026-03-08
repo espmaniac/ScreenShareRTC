@@ -8,10 +8,8 @@ ShareScreenRTC is a serverless WebRTC screen sharing page.
 
 - Start broadcast on computer (the broadcast link field appears during startup and is filled when offer/QR is ready; preferred link is generated `data:text/html` mobile viewer page).
 - Scan QR on phone to join.
-- Phone generates two things for broadcaster:
-  - short response code (6 chars),
-  - compact response token (compressed answer payload).
-- On computer, type response code (6–8 chars allowed) and enter the compact token.
+- Phone generates a compact response token (compressed answer payload).
+- On computer, paste the compact token and apply it.
 
 No Python signaling server is required. The page builds its role/state from URL code parameters (`mode`, `code`, `offer`).
 
@@ -19,8 +17,8 @@ No Python signaling server is required. The page builds its role/state from URL 
 
 1. Broadcaster clicks **Start Broadcast**.
 2. Broadcaster shows offer QR to phone.
-3. Phone opens viewer mode automatically from the QR URL (which includes mode/code in URL parameters) and generates a short code + compact token.
-4. Broadcaster manually enters short code and compact token, then clicks **Apply Response**.
+3. Phone opens viewer mode automatically from the QR URL (which includes mode/code in URL parameters) and generates a compact token.
+4. Broadcaster pastes compact token, then clicks **Apply Response**.
 
 ## Run options
 
@@ -35,7 +33,6 @@ Both devices should be on the same Wi‑Fi/local network.
 ## Notes
 
 - Uses `RTCPeerConnection({ iceServers: [] })` for local network behavior.
-- The 6–8 character code is only a verifier; WebRTC still requires a compact answer token to complete connection.
 - `server.py` is not needed in this workflow.
 
 - If QR image does not appear (for example, CDN blocked), use the shown Broadcast URL code text directly.
