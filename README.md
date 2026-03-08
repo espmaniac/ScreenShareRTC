@@ -36,4 +36,4 @@ Both devices should be on the same Wi‑Fi/local network.
 - `server.py` is not needed in this workflow.
 - If QR image does not appear, use the shown Broadcast URL text directly.
 - To keep payloads small, SDP is reduced to minimal LAN candidates before encoding.
-- The phone page opened from QR is intentionally minimal: just video stream + answer token output.
+- The phone page opened from QR is intentionally minimal: no CSS, only video stream + answer token output.
