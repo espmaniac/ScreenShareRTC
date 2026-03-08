@@ -307,13 +307,28 @@
           if (isOfferer) {
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
-            const mobileUrl = buildMobileViewerDataUrl(currentSiteCode, offerObj);
+            const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
+
+            let shareUrl = '';
+            let shareMode = 'data';
+            try {
+              shareUrl = buildMobileViewerDataUrl(currentSiteCode, offerObj);
+            } catch (err) {
+              shareMode = 'web';
+              shareUrl = buildViewUrl(currentSiteCode, offerEncoded);
+              log(`data:text/html URL generation failed, fallback to page URL: ${err}`);
+            }
+
             history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
-            const qrOk = generateQR(qrboxOffer, mobileUrl);
+            const qrOk = generateQR(qrboxOffer, shareUrl);
             qrOffer.classList.add('visible');
-            broadcastUrlCode.value = mobileUrl;
+            broadcastUrlCode.value = shareUrl;
             broadcastUrlBlock.classList.remove('hidden');
-            log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated data:text/html URL below.');
+            if (shareMode === 'data') {
+              log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated data:text/html URL below.');
+            } else {
+              log(qrOk ? 'Broadcast and QR started (fallback URL mode).' : 'Broadcast started. QR unavailable; use generated fallback URL below.');
+            }
           } else {
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const answerObj = { type: pc.localDescription.type, sdp: slimAnswerSdp };
@@ -366,13 +381,17 @@
       currentSiteCode = randomCode(8);
       siteCodeInput.value = currentSiteCode;
 
-      broadcastUrlCode.value = '';
-      broadcastUrlBlock.classList.add('hidden');
-      qrOffer.classList.remove('visible');
+      broadcastUrlCode.value = 'Preparing broadcast URL...';
+      broadcastUrlBlock.classList.remove('hidden');
+      qrOffer.classList.add('visible');
+      qrboxOffer.innerHTML = '<div class="hint">Starting broadcast...</div>';
 
       try {
         localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
       } catch (e) {
+        broadcastUrlCode.value = '';
+        broadcastUrlBlock.classList.add('hidden');
+        qrOffer.classList.remove('visible');
         alert(`Failed to capture screen: ${e}`);
         return;
       }

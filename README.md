@@ -6,7 +6,7 @@
 
 ShareScreenRTC is a serverless WebRTC screen sharing page.
 
-- Start broadcast on computer (the link appears only after broadcast+QR start, and that link is a generated `data:text/html` mobile viewer page).
+- Start broadcast on computer (the broadcast link field appears during startup and is filled when offer/QR is ready; preferred link is generated `data:text/html` mobile viewer page).
 - Scan QR on phone to join.
 - Phone generates two things for broadcaster:
   - short response code (6 chars),
@@ -42,3 +42,4 @@ Both devices should be on the same Wi‑Fi/local network.
 - To keep QR payloads small, SDP is reduced to minimal LAN candidates before encoding into URL/token.
 - The phone page opened from QR is intentionally minimal: just the video stream and answer output (code + token).
 - The shared link is a generated `data:text/html` mobile page (not the broadcaster page URL).
+- If `data:text/html` generation fails in a browser, a fallback page URL is shown automatically so broadcast link still appears.
