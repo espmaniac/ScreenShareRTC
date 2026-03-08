@@ -86,6 +86,7 @@
       <div class="label">Offer token input (manual or scanned):</div>
       <textarea id="viewer-offer-token" rows="4" placeholder="Paste offer token"></textarea>
       <button id="process-offer">Process Offer</button>
+      <button id="scan-offer">Scan Offer QR</button>
 
       <div class="label">Answer token:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
@@ -114,6 +115,7 @@
     const viewerOfferToken = document.getElementById('viewer-offer-token');
     const viewerResponseToken = document.getElementById('viewer-response-token');
     const processOfferBtn = document.getElementById('process-offer');
+    const scanOfferBtn = document.getElementById('scan-offer');
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
     const urlModeHint = document.getElementById('url-mode-hint');
@@ -225,122 +227,12 @@
     }
 
     function buildViewerDataUrl() {
-      const viewerHtml = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ShareScreenRTC Viewer</title></head>
-<body style="font-family:system-ui,sans-serif;padding:12px;max-width:900px;margin:0 auto">
-  <h3 style="margin:0 0 8px 0">ShareScreenRTC Viewer</h3>
-  <p style="margin:0 0 10px 0">Paste offer token, then copy answer token back to broadcaster.</p>
-  <textarea id="offer-token" rows="5" style="width:100%;font-family:monospace" placeholder="Paste offer token"></textarea>
-  <div style="margin:8px 0">
-    <button id="process-offer">Process Offer</button>
-    <button id="copy-answer">Copy Answer</button>
-  </div>
-  <video id="video-remote" playsinline autoplay controls style="width:100%;background:#000;border-radius:8px;display:none"></video>
-  <div style="margin-top:10px;font-weight:600">Answer token</div>
-  <textarea id="answer-token" rows="5" readonly style="width:100%;font-family:monospace"></textarea>
-  <script>
-    let pc;
-    const videoRemote = document.getElementById('video-remote');
-    const offerTokenInput = document.getElementById('offer-token');
-    const answerToken = document.getElementById('answer-token');
-    const processOfferBtn = document.getElementById('process-offer');
-    const copyAnswerBtn = document.getElementById('copy-answer');
-
-    function b64urlEncode(bytes) {
-      let binary = '';
-      bytes.forEach((b) => { binary += String.fromCharCode(b); });
-      return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
-    }
-
-    function b64urlDecode(str) {
-      const base64 = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(str.length / 4) * 4, '=');
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-      return bytes;
-    }
-
-    async function gzipBytes(text) {
-      if (!window.CompressionStream) return null;
-      const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
-      const buffer = await new Response(stream).arrayBuffer();
-      return new Uint8Array(buffer);
-    }
-
-    async function encodeCompactPayload(payloadObj) {
-      const json = JSON.stringify(payloadObj);
-      const gz = await gzipBytes(json);
-      if (gz && gz.length < json.length) return 'G' + b64urlEncode(gz);
-      return 'P' + b64urlEncode(new TextEncoder().encode(json));
-    }
-
-    function slimSdpForLan(sdp) {
-      const lines = sdp.split('\\n');
-      const out = [];
-      let sectionKey = 'session';
-      const keptBySection = new Set();
-      for (const rawLine of lines) {
-        const line = rawLine.trimEnd();
-        if (!line) continue;
-        if (line.startsWith('m=')) { sectionKey = line; out.push(line); continue; }
-        if (line.startsWith('a=candidate:')) {
-          const normalized = (' ' + line.toLowerCase() + ' ');
-          const preferred = normalized.includes(' udp ') && normalized.includes(' typ host ');
-          if (!keptBySection.has(sectionKey) && preferred) { out.push(line); keptBySection.add(sectionKey); }
-          else if (!keptBySection.has(sectionKey) && !normalized.includes(' tcp ')) { out.push(line); keptBySection.add(sectionKey); }
-          continue;
-        }
-        if (line.startsWith('a=end-of-candidates')) { if (keptBySection.has(sectionKey)) out.push(line); continue; }
-        out.push(line);
-      }
-      return out.join('\\r\\n') + '\\r\\n';
-    }
-
-    function createPeerConnection() {
-      pc = new RTCPeerConnection({ iceServers: [] });
-      pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          videoRemote.srcObject = event.streams[0];
-          videoRemote.style.display = 'block';
-        }
-      };
-      pc.onicecandidate = async (e) => {
-        if (!e.candidate) {
-          const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
-          const token = await encodeCompactPayload({ a: slimAnswerSdp });
-          answerToken.value = token;
-        }
-      };
-    }
-
-    processOfferBtn.onclick = async () => {
-      const token = offerTokenInput.value.trim();
-      if (!token) { alert('Paste offer token first.'); return; }
-      let offerObj;
-      try {
-        offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(token)));
-      } catch (e) {
-        alert('Invalid offer token: ' + e);
-        return;
-      }
-      createPeerConnection();
-      await pc.setRemoteDescription(offerObj);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-    };
-
-    copyAnswerBtn.onclick = async () => {
-      if (!answerToken.value) return;
-      await navigator.clipboard.writeText(answerToken.value);
-    };
-  <\/script>
-</body></html>`;
-
-      return `data:text/html;charset=utf-8,${encodeURIComponent(viewerHtml)}`;
+      const html = `<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><title>Viewer</title><body><textarea id=o rows=4 style=width:100% placeholder='Paste/scan offer token'></textarea><button id=p>Process</button><button id=s>Scan QR</button><video id=v autoplay playsinline controls style='width:100%;background:#000;display:none'></video><textarea id=a rows=4 readonly style=width:100% placeholder='Answer token'></textarea><button id=c>Copy Answer</button><script>let pc,st,t;const o=document.getElementById('o'),a=document.getElementById('a'),v=document.getElementById('v');const b=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'='));const u=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');p.onclick=async()=>{try{pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0]){v.srcObject=e.streams[0];v.style.display='block';}};pc.onicecandidate=e=>{if(!e.candidate)a.value='P'+u(JSON.stringify({a:pc.localDescription.sdp}))};await pc.setRemoteDescription(JSON.parse(b(o.value.trim())));await pc.setLocalDescription(await pc.createAnswer());}catch(e){alert('Invalid offer token: '+e)}};c.onclick=async()=>a.value&&navigator.clipboard.writeText(a.value);s.onclick=async()=>{if(!window.BarcodeDetector)return alert('BarcodeDetector not supported.');try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});const vd=document.createElement('video');vd.srcObject=st;await vd.play();const d=new BarcodeDetector({formats:['qr_code']});t=setInterval(async()=>{const r=await d.detect(vd);if(r[0]){o.value=r[0].rawValue.trim();clearInterval(t);st.getTracks().forEach(x=>x.stop())}},250)}catch(e){alert('QR scan failed: '+e)}};<\/script>`;
+      return `data:text/html,${encodeURIComponent(html)}`;
     }
 
     function createPeerConnection(isOfferer, stream = null) {
+
       pc = new RTCPeerConnection({ iceServers: [] });
 
       pc.onicecandidate = async (e) => {
@@ -493,6 +385,34 @@
       urlModeHint.textContent = 'Viewer mode enabled.';
     };
     processOfferBtn.onclick = () => processOfferInViewer();
+    scanOfferBtn.onclick = async () => {
+      if (!window.BarcodeDetector) {
+        alert('BarcodeDetector is not supported in this browser.');
+        return;
+      }
+      let stream;
+      let timer;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const probeVideo = document.createElement('video');
+        probeVideo.playsInline = true;
+        probeVideo.srcObject = stream;
+        await probeVideo.play();
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        timer = setInterval(async () => {
+          const codes = await detector.detect(probeVideo);
+          if (codes[0] && codes[0].rawValue) {
+            viewerOfferToken.value = codes[0].rawValue.trim();
+            clearInterval(timer);
+            stream.getTracks().forEach((track) => track.stop());
+          }
+        }, 250);
+      } catch (e) {
+        if (timer) clearInterval(timer);
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+        alert(`QR scan failed: ${e}`);
+      }
+    };
     applyAnswerBtn.onclick = () => applyResponseFromInputs();
 
     copyOfferTokenBtn.onclick = async () => {
