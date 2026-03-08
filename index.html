@@ -32,7 +32,8 @@
 <body>
   <div class="center-block">
     <h2>ShareScreenRTC (Serverless)</h2>
-    <div class="hint">No server. Offer is shared by QR; response is typed as short code + compact token.</div>
+    <div class="hint">No server. Computer generates QR, phone opens URL, and the page state is built from URL code parameters.</div>
+    <div class="hint" id="url-mode-hint"></div>
 
     <div class="mode-buttons">
       <button id="btn-cast">Start Broadcast</button>
@@ -95,6 +96,7 @@
     const viewerResponseToken = document.getElementById('viewer-response-token');
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
+    const urlModeHint = document.getElementById('url-mode-hint');
 
     function log(msg) {
       logArea.value += `${new Date().toLocaleTimeString()} - ${msg}\n`;
@@ -172,6 +174,26 @@
       throw new Error('Unknown token format.');
     }
 
+    function setPageStateFromUrl(url) {
+      const mode = url.searchParams.get('mode');
+      const code = url.searchParams.get('code');
+      if (code) {
+        currentSiteCode = code.toUpperCase();
+        siteCodeInput.value = currentSiteCode;
+      }
+      if (mode === 'view') {
+        btnCast.classList.add('hidden');
+        btnView.classList.remove('hidden');
+        urlModeHint.textContent = `Viewer mode loaded from URL code${code ? `: ${code}` : ''}.`;
+      } else if (mode === 'cast') {
+        btnView.classList.add('hidden');
+        btnCast.classList.remove('hidden');
+        urlModeHint.textContent = `Broadcaster mode loaded from URL code${code ? `: ${code}` : ''}.`;
+      } else {
+        urlModeHint.textContent = '';
+      }
+    }
+
     function createPeerConnection(isOfferer, stream = null) {
       pc = new RTCPeerConnection({ iceServers: [] });
 
@@ -181,6 +203,7 @@
             const offerObj = { type: pc.localDescription.type, sdp: pc.localDescription.sdp };
             const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
             const offerUrl = `${location.origin}${location.pathname}?mode=view&code=${currentSiteCode}&offer=${encodeURIComponent(offerEncoded)}`;
+            history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
             generateQR(qrboxOffer, offerUrl);
             qrOffer.classList.add('visible');
             log('Offer ready. Scan QR from phone to join.');
@@ -323,6 +346,8 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
       const url = new URL(location.href);
+      setPageStateFromUrl(url);
+
       const mode = url.searchParams.get('mode');
       const offer = url.searchParams.get('offer');
       const siteCode = url.searchParams.get('code');

@@ -13,13 +13,13 @@ ShareScreenRTC is a serverless WebRTC screen sharing page.
   - compact response token (compressed answer payload).
 - On computer, type response code (6–8 chars allowed) and enter the compact token.
 
-No Python signaling server is required.
+No Python signaling server is required. The page builds its role/state from URL code parameters (`mode`, `code`, `offer`).
 
 ## Flow
 
 1. Broadcaster clicks **Start Broadcast**.
 2. Broadcaster shows offer QR to phone.
-3. Phone opens viewer mode automatically and generates a short code + compact token.
+3. Phone opens viewer mode automatically from the QR URL (which includes mode/code in URL parameters) and generates a short code + compact token.
 4. Broadcaster manually enters short code and compact token, then clicks **Apply Response**.
 
 ## Run options
