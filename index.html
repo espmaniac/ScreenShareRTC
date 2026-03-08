@@ -292,6 +292,12 @@
       return `${base}?mode=view&code=${code}`;
     }
 
+    function buildMobileViewerDataUrl(code, offerObj) {
+      const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
+      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><style>body{margin:0;background:#111;color:#eee;font-family:system-ui;padding:10px}video{width:100%;max-height:56vh;background:#000;border-radius:8px}input,textarea{width:100%;box-sizing:border-box;font-family:monospace;margin-top:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:6px;padding:8px}small{color:#bbb}</style><video id=v autoplay playsinline controls></video><div><small>Answer code</small><input id=c readonly></div><div><small>Answer token</small><textarea id=t rows=6 readonly></textarea></div><script>(async()=>{const C=${JSON.stringify(code)};const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0])document.getElementById('v').srcObject=e.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const base='P'+e(JSON.stringify({c:C,a:s}));const r=base.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6).padEnd(6,'A');const token='P'+e(JSON.stringify({c:C,r:r,a:s}));document.getElementById('c').value=r;document.getElementById('t').value=token;})();<\/script>`;
+      return `data:text/html;base64,${btoa(unescape(encodeURIComponent(mobileHtml)))}`;
+    }
+
 
     function createPeerConnection(isOfferer, stream = null) {
       pc = new RTCPeerConnection({ iceServers: [] });
@@ -301,14 +307,13 @@
           if (isOfferer) {
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
-            const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
-            const offerUrl = buildViewUrl(currentSiteCode, offerEncoded);
+            const mobileUrl = buildMobileViewerDataUrl(currentSiteCode, offerObj);
             history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
-            const qrOk = generateQR(qrboxOffer, offerUrl);
+            const qrOk = generateQR(qrboxOffer, mobileUrl);
             qrOffer.classList.add('visible');
-            broadcastUrlCode.value = offerUrl;
+            broadcastUrlCode.value = mobileUrl;
             broadcastUrlBlock.classList.remove('hidden');
-            log(qrOk ? 'Offer ready. Scan QR from phone to join.' : 'Offer ready. QR unavailable; share the Broadcast URL code text.');
+            log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated data:text/html URL below.');
           } else {
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const answerObj = { type: pc.localDescription.type, sdp: slimAnswerSdp };
@@ -361,14 +366,9 @@
       currentSiteCode = randomCode(8);
       siteCodeInput.value = currentSiteCode;
 
-      const earlyUrl = buildViewUrl(currentSiteCode);
-      broadcastUrlCode.value = earlyUrl;
-      broadcastUrlBlock.classList.remove('hidden');
-      qrOffer.classList.add('visible');
-      const earlyQrOk = generateQR(qrboxOffer, earlyUrl);
-      log(earlyQrOk
-        ? 'Broadcast link generated. Scan QR now; offer details will update automatically.'
-        : 'Broadcast link generated. QR unavailable, use Broadcast URL text.');
+      broadcastUrlCode.value = '';
+      broadcastUrlBlock.classList.add('hidden');
+      qrOffer.classList.remove('visible');
 
       try {
         localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -377,7 +377,10 @@
         return;
       }
 
-      qrboxOffer.innerHTML = '<div class="hint">Finalizing offer QR...</div>';
+      qrboxOffer.innerHTML = '<div class="hint">Starting broadcast...</div>';
+      qrStatus.classList.add('hidden');
+      qrStatus.textContent = '';
+
       createPeerConnection(true, localStream);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
