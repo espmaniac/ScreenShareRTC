@@ -75,7 +75,7 @@
       <button id="copy-offer-token">Copy Offer Token</button>
 
       <div class="label">Answer token or short code (from phone):</div>
-      <textarea id="response-token" rows="4" placeholder="Paste answer token, or enter a 6-8 char code"></textarea>
+      <textarea id="response-token" rows="4" placeholder="Paste answer token, or enter a 5-6 char code"></textarea>
       <button id="apply-answer">Apply Response</button>
 
       <div class="label">Connection log:</div>
@@ -152,13 +152,13 @@
     }
 
     function isShortCode(code) {
-      return /^[A-Z2-9]{6,8}$/.test(normalizeShortCode(code));
+      return /^[A-Z2-9]{5,6}$/.test(normalizeShortCode(code));
     }
 
     function createShortCode() {
       const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let code = '';
-      for (let i = 0; i < 7; i += 1) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+      for (let i = 0; i < 6; i += 1) code += alphabet[Math.floor(Math.random() * alphabet.length)];
       return code;
     }
 
