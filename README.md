@@ -6,7 +6,7 @@
 
 ShareScreenRTC is a serverless WebRTC screen sharing page.
 
-- Start broadcast on computer.
+- Start broadcast on computer (after clicking **Start Broadcast**, the page shows the QR URL as text/code below the button).
 - Scan QR on phone to join.
 - Phone generates two things for broadcaster:
   - short response code (6 chars),

@@ -40,6 +40,12 @@
       <button id="btn-view">Join Broadcast</button>
     </div>
 
+    <div id="broadcast-url-block" class="full-width hidden">
+      <div class="label">Broadcast URL code (from QR URL):</div>
+      <textarea id="broadcast-url-code" rows="3" readonly></textarea>
+      <button id="copy-broadcast-url">Copy Broadcast URL</button>
+    </div>
+
     <video id="video-local" muted playsinline controls></video>
     <video id="video-remote" playsinline controls autoplay></video>
 
@@ -97,6 +103,9 @@
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
     const urlModeHint = document.getElementById('url-mode-hint');
+    const broadcastUrlBlock = document.getElementById('broadcast-url-block');
+    const broadcastUrlCode = document.getElementById('broadcast-url-code');
+    const copyBroadcastUrlBtn = document.getElementById('copy-broadcast-url');
 
     function log(msg) {
       logArea.value += `${new Date().toLocaleTimeString()} - ${msg}\n`;
@@ -206,6 +215,8 @@
             history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
             generateQR(qrboxOffer, offerUrl);
             qrOffer.classList.add('visible');
+            broadcastUrlCode.value = offerUrl;
+            broadcastUrlBlock.classList.remove('hidden');
             log('Offer ready. Scan QR from phone to join.');
           } else {
             const answerObj = { type: pc.localDescription.type, sdp: pc.localDescription.sdp };
@@ -263,6 +274,8 @@
       }
       currentSiteCode = randomCode(8);
       siteCodeInput.value = currentSiteCode;
+      broadcastUrlCode.value = '';
+      broadcastUrlBlock.classList.add('hidden');
       createPeerConnection(true, localStream);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -342,6 +355,12 @@
       if (!viewerResponseToken.value) return;
       await navigator.clipboard.writeText(viewerResponseToken.value);
       log('Compact response token copied.');
+    };
+
+    copyBroadcastUrlBtn.onclick = async () => {
+      if (!broadcastUrlCode.value) return;
+      await navigator.clipboard.writeText(broadcastUrlCode.value);
+      log('Broadcast URL copied.');
     };
 
     window.addEventListener('DOMContentLoaded', async () => {
