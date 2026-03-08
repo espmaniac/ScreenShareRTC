@@ -74,8 +74,8 @@
       <textarea id="offer-token" rows="4" readonly></textarea>
       <button id="copy-offer-token">Copy Offer Token</button>
 
-      <div class="label">Answer token or short code (from phone):</div>
-      <textarea id="response-token" rows="4" placeholder="Paste answer token, or enter a 5-6 char code"></textarea>
+      <div class="label">Answer token (from phone):</div>
+      <textarea id="response-token" rows="4" placeholder="Paste answer token"></textarea>
       <button id="apply-answer">Apply Response</button>
 
       <div class="label">Connection log:</div>
@@ -87,9 +87,9 @@
       <textarea id="viewer-offer-token" rows="4" placeholder="Paste offer token"></textarea>
       <button id="process-offer">Process Offer</button>
 
-      <div class="label">Answer short code:</div>
+      <div class="label">Answer token:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
-      <button id="copy-response-token">Copy answer code</button>
+      <button id="copy-response-token">Copy answer token</button>
     </div>
   </div>
 
@@ -120,74 +120,11 @@
     const broadcastUrlBlock = document.getElementById('broadcast-url-block');
     const broadcastUrlCode = document.getElementById('broadcast-url-code');
     const copyBroadcastUrlBtn = document.getElementById('copy-broadcast-url');
-    const ANSWER_CODE_STORAGE_KEY = 'ssrtc-answer-code-map-v1';
-    const answerCodeMap = new Map();
-
-
     function log(msg) {
       logArea.value += `${new Date().toLocaleTimeString()} - ${msg}\n`;
       logArea.scrollTop = logArea.scrollHeight;
     }
 
-
-    function loadAnswerCodeMap() {
-      try {
-        const raw = localStorage.getItem(ANSWER_CODE_STORAGE_KEY);
-        if (!raw) return;
-        const obj = JSON.parse(raw);
-        Object.entries(obj).forEach(([code, sdp]) => {
-          if (typeof sdp === 'string') answerCodeMap.set(code, sdp);
-        });
-      } catch {}
-    }
-
-    function saveAnswerCodeMap() {
-      try {
-        localStorage.setItem(ANSWER_CODE_STORAGE_KEY, JSON.stringify(Object.fromEntries(answerCodeMap)));
-      } catch {}
-    }
-
-    function normalizeShortCode(code) {
-      return code.trim().toUpperCase();
-    }
-
-    function isShortCode(code) {
-      return /^[A-Z2-9]{5,6}$/.test(normalizeShortCode(code));
-    }
-
-    function createShortCode() {
-      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let code = '';
-      for (let i = 0; i < 6; i += 1) code += alphabet[Math.floor(Math.random() * alphabet.length)];
-      return code;
-    }
-
-    function findCodeBySdp(sdp) {
-      for (const [code, value] of answerCodeMap.entries()) {
-        if (value === sdp) return code;
-      }
-      return '';
-    }
-
-    function registerAnswerSdp(sdp) {
-      const existing = findCodeBySdp(sdp);
-      if (existing) return existing;
-      let code = createShortCode();
-      while (answerCodeMap.has(code)) code = createShortCode();
-      answerCodeMap.set(code, sdp);
-      saveAnswerCodeMap();
-      logSdpTable();
-      return code;
-    }
-
-    function logSdpTable() {
-      const rows = [];
-      for (const [code, sdp] of answerCodeMap.entries()) {
-        rows.push({ code, sdpPreview: sdp.slice(0, 120) });
-      }
-      console.log('SDP code table (code -> answer SDP preview)');
-      console.table(rows);
-    }
 
     function generateQR(container, value) {
       container.innerHTML = '';
@@ -326,11 +263,9 @@
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const payload = { a: slimAnswerSdp };
             const token = await encodeCompactPayload(payload);
-            const shortCode = registerAnswerSdp(slimAnswerSdp);
-            viewerResponseToken.value = shortCode;
-            viewerResponseToken.dataset.fullToken = token;
+            viewerResponseToken.value = token;
             viewerPanel.classList.remove('hidden');
-            log(`Answer short code is ready: ${shortCode}`);
+            log('Answer token is ready. Transfer it to broadcaster manually.');
           }
         }
       };
@@ -430,39 +365,25 @@
         alert('Start broadcast first.');
         return;
       }
-      const input = responseTokenInput.value.trim();
-      if (!input) {
-        alert('Paste/enter answer token or short code.');
+      const token = responseTokenInput.value.trim();
+      if (!token) {
+        alert('Paste/enter answer token.');
         return;
       }
 
-      let sdp = '';
-      if (isShortCode(input)) {
-        const code = normalizeShortCode(input);
-        sdp = answerCodeMap.get(code) || '';
-        if (!sdp) {
-          alert('Unknown short code on this device. Check console.table for known codes, or paste full answer token once to register.');
-          return;
-        }
-        log(`Resolved short code ${code} to stored answer SDP.`);
-      } else {
-        let payload;
-        try {
-          payload = await decodeCompactPayload(input);
-        } catch (e) {
-          alert(`Cannot decode token: ${e}`);
-          return;
-        }
-        if (!payload || !payload.a) {
-          alert('Invalid response token.');
-          return;
-        }
-        sdp = payload.a;
-        const code = registerAnswerSdp(sdp);
-        log(`Stored answer token as short code: ${code}`);
+      let payload;
+      try {
+        payload = await decodeCompactPayload(token);
+      } catch (e) {
+        alert(`Cannot decode token: ${e}`);
+        return;
+      }
+      if (!payload || !payload.a) {
+        alert('Invalid response token.');
+        return;
       }
 
-      await pc.setRemoteDescription({ type: 'answer', sdp });
+      await pc.setRemoteDescription({ type: 'answer', sdp: payload.a });
       log('Answer applied. Connection should establish shortly.');
     }
 
@@ -495,8 +416,6 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       const url = new URL(location.href);
-      loadAnswerCodeMap();
-      logSdpTable();
       setPageStateFromUrl(url);
       const offerParam = url.searchParams.get('offer');
       if (offerParam) viewerOfferToken.value = offerParam;
