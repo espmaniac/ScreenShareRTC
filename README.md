@@ -6,21 +6,19 @@
 
 ShareScreenRTC is a serverless WebRTC screen sharing page.
 
-- Start broadcast on computer (the broadcast link field appears during startup and is filled when offer/QR is ready; preferred link is generated `data:text/html` mobile viewer page).
+- Start broadcast on computer.
 - Scan QR on phone to join.
-- Phone generates two values:
-  - response code (6 chars),
-  - compact response token (compressed answer payload).
-- On computer, enter response code (6–8 chars) and paste compact token, then apply it.
+- Phone generates only one value: compact response token.
+- On computer, paste compact token, then apply it.
 
-No Python signaling server is required. The page builds its role/state from URL code parameters (`mode`, `code`, `offer`).
+No Python signaling server is required.
 
 ## Flow
 
 1. Broadcaster clicks **Start Broadcast**.
 2. Broadcaster shows offer QR to phone.
-3. Phone opens viewer mode automatically from the QR URL (which includes mode/code in URL parameters) and generates response code + compact token.
-4. Broadcaster enters response code and compact token, then clicks **Apply Response**.
+3. Phone opens viewer mode from QR and generates compact token.
+4. Broadcaster pastes compact token, then clicks **Apply Response**.
 
 ## Run options
 
@@ -36,9 +34,6 @@ Both devices should be on the same Wi‑Fi/local network.
 
 - Uses `RTCPeerConnection({ iceServers: [] })` for local network behavior.
 - `server.py` is not needed in this workflow.
-
-- If QR image does not appear (for example, CDN blocked), use the shown Broadcast URL code text directly.
-- To keep QR payloads small, SDP is reduced to minimal LAN candidates before encoding into URL/token.
-- The phone page opened from QR is intentionally minimal: just video stream plus response code/token output.
-- The shared link is a generated `data:text/html` mobile page (not the broadcaster page URL).
-- If `data:text/html` generation fails in a browser, a fallback page URL is shown automatically so broadcast link still appears.
+- If QR image does not appear, use the shown Broadcast URL text directly.
+- To keep payloads small, SDP is reduced to minimal LAN candidates before encoding.
+- The phone page opened from QR is intentionally minimal: just video stream + answer token output.

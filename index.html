@@ -33,7 +33,6 @@
     body.viewer-simple #url-mode-hint {
       display: none !important;
     }
-
     @media (max-width:600px) { .mode-buttons { flex-direction: column; } .center-block { padding: 1em; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
@@ -41,7 +40,7 @@
 <body>
   <div class="center-block">
     <h2>ShareScreenRTC (Serverless)</h2>
-    <div class="hint">No server. Computer generates QR, phone opens URL, and the page state is built from URL code parameters.</div>
+    <div class="hint">No server. Computer generates QR/link, phone opens URL, and returns answer token.</div>
     <div class="hint" id="url-mode-hint"></div>
 
     <div class="mode-buttons">
@@ -50,7 +49,7 @@
     </div>
 
     <div id="broadcast-url-block" class="full-width hidden">
-      <div class="label">Broadcast URL code (from QR URL):</div>
+      <div class="label">Broadcast URL:</div>
       <textarea id="broadcast-url-code" rows="3" readonly></textarea>
       <button id="copy-broadcast-url">Copy Broadcast URL</button>
     </div>
@@ -62,16 +61,12 @@
       <b>1) Scan this QR on your phone</b>
       <div id="qrbox-offer"></div>
       <div id="qr-status" class="hidden"></div>
-      <div class="hint">Phone opens viewer mode with offer included in URL.</div>
+      <div class="hint">Phone opens viewer mode and creates answer token.</div>
     </div>
 
     <div class="full-width" id="broadcaster-controls">
-      <div class="label">Response code (from phone):</div>
-      <input id="response-code" type="text" maxlength="8" placeholder="Type 6-8 chars">
-
       <div class="label">Compact response token (from phone):</div>
       <textarea id="response-token" rows="4" placeholder="Type/paste compact token"></textarea>
-
       <button id="apply-answer">Apply Response</button>
 
       <div class="label">Connection log:</div>
@@ -79,8 +74,6 @@
     </div>
 
     <div id="viewer-panel" class="full-width hidden">
-      <div class="label">Response code:</div>
-      <input id="viewer-response-code" type="text" readonly>
       <div class="label">Answer token:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
       <button id="copy-response-token">Copy answer token</button>
@@ -91,7 +84,6 @@
     let pc;
     let dataChannel;
     let localStream = null;
-    let currentSiteCode = '';
 
     const btnCast = document.getElementById('btn-cast');
     const btnView = document.getElementById('btn-view');
@@ -100,12 +92,10 @@
     const qrOffer = document.getElementById('qr-offer');
     const qrboxOffer = document.getElementById('qrbox-offer');
     const qrStatus = document.getElementById('qr-status');
-    const responseCodeInput = document.getElementById('response-code');
     const responseTokenInput = document.getElementById('response-token');
     const applyAnswerBtn = document.getElementById('apply-answer');
     const broadcasterControls = document.getElementById('broadcaster-controls');
     const viewerPanel = document.getElementById('viewer-panel');
-    const viewerResponseCode = document.getElementById('viewer-response-code');
     const viewerResponseToken = document.getElementById('viewer-response-token');
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
@@ -119,19 +109,12 @@
       logArea.scrollTop = logArea.scrollHeight;
     }
 
-    function randomCode(length = 8) {
-      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const arr = new Uint8Array(length);
-      crypto.getRandomValues(arr);
-      return [...arr].map(v => alphabet[v % alphabet.length]).join('');
-    }
-
     function generateQR(container, value) {
       container.innerHTML = '';
       qrStatus.classList.add('hidden');
       qrStatus.textContent = '';
       if (typeof qrcode !== 'function') {
-        qrStatus.textContent = 'QR library did not load. Use the Broadcast URL code text below.';
+        qrStatus.textContent = 'QR library did not load. Use the Broadcast URL text below.';
         qrStatus.classList.remove('hidden');
         return false;
       }
@@ -146,14 +129,6 @@
         qrStatus.classList.remove('hidden');
         return false;
       }
-    }
-
-    async function shortCodeFromString(value, length = 6) {
-      const data = new TextEncoder().encode(value);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      const bytes = new Uint8Array(hash).slice(0, length);
-      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      return [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
     }
 
     function b64urlEncode(bytes) {
@@ -204,7 +179,6 @@
       throw new Error('Unknown token format.');
     }
 
-
     function slimSdpForLan(sdp) {
       const lines = sdp.split('\n');
       const out = [];
@@ -247,28 +221,25 @@
 
     function setPageStateFromUrl(url) {
       const mode = url.searchParams.get('mode');
-      const code = url.searchParams.get('code');
-      if (code) currentSiteCode = code.toUpperCase();
       if (mode === 'view') {
         document.body.classList.add('viewer-simple');
         btnCast.classList.add('hidden');
         btnView.classList.add('hidden');
         broadcasterControls.classList.add('hidden');
         viewerPanel.classList.remove('hidden');
-        urlModeHint.textContent = `Viewer mode loaded from URL code${code ? `: ${code}` : ''}.`;
+        urlModeHint.textContent = 'Viewer mode loaded from URL.';
       } else if (mode === 'cast') {
         document.body.classList.remove('viewer-simple');
         btnView.classList.add('hidden');
         btnCast.classList.remove('hidden');
         broadcasterControls.classList.remove('hidden');
-        urlModeHint.textContent = `Broadcaster mode loaded from URL code${code ? `: ${code}` : ''}.`;
+        urlModeHint.textContent = 'Broadcaster mode loaded from URL.';
       } else {
         document.body.classList.remove('viewer-simple');
         viewerPanel.classList.add('hidden');
         urlModeHint.textContent = '';
       }
     }
-
 
     function getSharePageUrlBase() {
       const url = new URL(window.location.href);
@@ -277,20 +248,17 @@
       return url.toString();
     }
 
-    function buildViewUrl(code, offerEncoded = '') {
+    function buildViewUrl(offerEncoded = '') {
       const base = getSharePageUrlBase();
-      if (offerEncoded) {
-        return `${base}?mode=view&code=${code}&offer=${encodeURIComponent(offerEncoded)}`;
-      }
-      return `${base}?mode=view&code=${code}`;
+      if (offerEncoded) return `${base}?mode=view&offer=${encodeURIComponent(offerEncoded)}`;
+      return `${base}?mode=view`;
     }
 
-    function buildMobileViewerDataUrl(code, offerObj) {
+    function buildMobileViewerDataUrl(offerObj) {
       const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
-      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><style>body{margin:0;background:#111;color:#eee;font-family:system-ui;padding:10px}video{width:100%;max-height:56vh;background:#000;border-radius:8px}input,textarea{width:100%;box-sizing:border-box;font-family:monospace;margin-top:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:6px;padding:8px}small{color:#bbb}</style><video id=v autoplay playsinline controls></video><div><small>Response code</small><input id=c readonly></div><div><small>Answer token</small><textarea id=t rows=6 readonly></textarea></div><script>(async()=>{const C=${JSON.stringify(code)};const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0])document.getElementById('v').srcObject=e.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const base='P'+e(JSON.stringify({c:C,a:s}));const rc=base.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6).padEnd(6,'A');const token='P'+e(JSON.stringify({c:C,r:rc,a:s}));document.getElementById('c').value=rc;document.getElementById('t').value=token;})();<\/script>`;
+      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><style>body{margin:0;background:#111;color:#eee;font-family:system-ui;padding:10px}video{width:100%;max-height:56vh;background:#000;border-radius:8px}textarea{width:100%;box-sizing:border-box;font-family:monospace;margin-top:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:6px;padding:8px}small{color:#bbb}</style><video id=v autoplay playsinline controls></video><div><small>Answer token</small><textarea id=t rows=6 readonly></textarea></div><script>(async()=>{const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=ev=>{if(ev.streams&&ev.streams[0])document.getElementById('v').srcObject=ev.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const token='P'+e(JSON.stringify({a:s}));document.getElementById('t').value=token;})();<\\/script>`;
       return `data:text/html;base64,${btoa(unescape(encodeURIComponent(mobileHtml)))}`;
     }
-
 
     function createPeerConnection(isOfferer, stream = null) {
       pc = new RTCPeerConnection({ iceServers: [] });
@@ -305,14 +273,14 @@
             let shareUrl = '';
             let shareMode = 'data';
             try {
-              shareUrl = buildMobileViewerDataUrl(currentSiteCode, offerObj);
+              shareUrl = buildMobileViewerDataUrl(offerObj);
             } catch (err) {
               shareMode = 'web';
-              shareUrl = buildViewUrl(currentSiteCode, offerEncoded);
+              shareUrl = buildViewUrl(offerEncoded);
               log(`data:text/html URL generation failed, fallback to page URL: ${err}`);
             }
 
-            history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
+            history.replaceState({}, '', `${location.pathname}?mode=cast`);
             const qrOk = generateQR(qrboxOffer, shareUrl);
             qrOffer.classList.add('visible');
             broadcastUrlCode.value = shareUrl;
@@ -325,17 +293,12 @@
             }
           } else {
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
-            const answerObj = { type: pc.localDescription.type, sdp: slimAnswerSdp };
-            const responseCode = await shortCodeFromString(answerObj.sdp, 6);
-            const payload = { c: currentSiteCode, r: responseCode, a: answerObj.sdp };
+            const payload = { a: slimAnswerSdp };
             const token = await encodeCompactPayload(payload);
 
             viewerPanel.classList.remove('hidden');
-            viewerResponseCode.value = responseCode;
             viewerResponseToken.value = token;
-
-            log(`Viewer response code: ${responseCode}`);
-            log('Viewer answer token is ready. Share code + token with broadcaster.');
+            log('Viewer answer token is ready. Share token with broadcaster.');
           }
         }
       };
@@ -371,8 +334,6 @@
     }
 
     async function startBroadcast() {
-      currentSiteCode = randomCode(8);
-
       broadcastUrlCode.value = 'Preparing broadcast URL...';
       broadcastUrlBlock.classList.remove('hidden');
       qrOffer.classList.add('visible');
@@ -388,18 +349,15 @@
         return;
       }
 
-      qrboxOffer.innerHTML = '<div class="hint">Starting broadcast...</div>';
       qrStatus.classList.add('hidden');
       qrStatus.textContent = '';
-
       createPeerConnection(true, localStream);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       log('Broadcast started.');
     }
 
-    async function joinBroadcast(offerEncoded, siteCode) {
-      currentSiteCode = siteCode || '';
+    async function joinBroadcast(offerEncoded) {
       const offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(offerEncoded)));
       createPeerConnection(false);
       videoRemote.classList.add('active');
@@ -412,12 +370,6 @@
     async function applyResponseFromInputs() {
       if (!pc || !pc.localDescription || pc.localDescription.type !== 'offer') {
         alert('Start broadcast first.');
-        return;
-      }
-
-      const typedCode = (responseCodeInput.value || '').trim().toUpperCase();
-      if (typedCode.length < 6 || typedCode.length > 8) {
-        alert('Enter response code (6-8 chars).');
         return;
       }
 
@@ -439,10 +391,6 @@
         alert('Invalid response token.');
         return;
       }
-      if ((payload.r || '').toUpperCase() !== typedCode) {
-        alert('Response code mismatch.');
-        return;
-      }
 
       await pc.setRemoteDescription({ type: 'answer', sdp: payload.a });
       log('Answer applied. Connection should establish shortly.');
@@ -453,12 +401,11 @@
     btnView.onclick = async () => {
       const url = new URL(location.href);
       const offer = url.searchParams.get('offer');
-      const siteCode = url.searchParams.get('code');
       if (!offer) {
         alert('Open this page from QR link that includes offer.');
         return;
       }
-      await joinBroadcast(decodeURIComponent(offer), siteCode);
+      await joinBroadcast(decodeURIComponent(offer));
     };
 
     applyAnswerBtn.onclick = () => applyResponseFromInputs();
@@ -481,11 +428,10 @@
 
       const mode = url.searchParams.get('mode');
       const offer = url.searchParams.get('offer');
-      const siteCode = url.searchParams.get('code');
 
       if (mode === 'view' && offer) {
         log('Offer found in URL. Auto-joining as viewer.');
-        await joinBroadcast(decodeURIComponent(offer), siteCode);
+        await joinBroadcast(decodeURIComponent(offer));
       }
     });
   </script>
