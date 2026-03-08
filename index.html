@@ -324,6 +324,7 @@
             qrOffer.classList.add('visible');
             broadcastUrlCode.value = shareUrl;
             broadcastUrlBlock.classList.remove('hidden');
+            console.log('[ShareScreenRTC] Phone link:', shareUrl);
             if (shareMode === 'data') {
               log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated data:text/html URL below.');
             } else {
