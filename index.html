@@ -87,9 +87,9 @@
       <textarea id="viewer-offer-token" rows="4" placeholder="Paste offer token"></textarea>
       <button id="process-offer">Process Offer</button>
 
-      <div class="label">Answer token:</div>
+      <div class="label">Answer short code:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
-      <button id="copy-response-token">Copy answer token</button>
+      <button id="copy-response-token">Copy answer code</button>
     </div>
   </div>
 
@@ -310,9 +310,11 @@
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const payload = { a: slimAnswerSdp };
             const token = await encodeCompactPayload(payload);
-            viewerResponseToken.value = token;
+            const shortCode = registerAnswerSdp(slimAnswerSdp);
+            viewerResponseToken.value = shortCode;
+            viewerResponseToken.dataset.fullToken = token;
             viewerPanel.classList.remove('hidden');
-            log('Answer token is ready. Transfer it to broadcaster manually.');
+            log(`Answer short code is ready: ${shortCode}`);
           }
         }
       };
