@@ -9,28 +9,29 @@
   <style>
     html, body { height: 100%; margin: 0; padding: 0; width: 100vw; min-height: 100vh; box-sizing: border-box; }
     body { min-height: 100vh; width: 100vw; background-color: #2b3137; display: flex; align-items: center; justify-content: center; }
-    .center-block { background: #fff; border-radius: 22px; box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18); padding: 2em; max-width: 780px; width: 92vw; min-width: 320px; margin: 2em auto; display: flex; flex-direction: column; align-items: center; }
+    .center-block { background: #fff; border-radius: 22px; box-shadow: 0 8px 32px rgba(31,38,135,0.18); padding: 2em; max-width: 780px; width: 92vw; min-width: 320px; margin: 2em auto; display: flex; flex-direction: column; align-items: center; }
     h2 { text-align: center; margin-bottom: 0.8em; color: #444; }
     button { margin: 0.2em 0.5em 0.2em 0; padding: 0.55em 1.2em; border-radius: 7px; border: none; background: #f3f3f3; color: #333; font-weight: 600; cursor: pointer; }
     button:hover, button:focus { background: rgba(255,145,136,0.15); color: #d82a72; }
     .hidden { display: none; }
     textarea, input[type="text"] { width: 100%; font-family: monospace; border-radius: 6px; border: 1.5px solid #eee; padding: 0.5em; margin: 0.2em 0 0.7em 0; box-sizing: border-box; background: #faf9fd; }
     .mode-buttons { width: 100%; display: flex; justify-content: center; gap: 0.8em; margin-bottom: 0.8em; }
-    #qr-offer { margin: 1em 0; padding: 0.7em; background: #fff; border-radius: 12px; display: none; flex-direction: column; align-items: center; width: 100%; }
-    #qr-offer.visible { display: flex; }
-    #qrbox-offer { width: min(320px, 75vw); height: min(320px, 75vw); display: flex; align-items: center; justify-content: center; }
-    #qrbox-offer img { width: 100%; height: 100%; object-fit: contain; }
-    #qr-status { margin-top: 0.6em; color: #a33; font-size: 0.9em; }
+    #qr-open-viewer, #qr-offer-token { margin: 1em 0; padding: 0.7em; background: #fff; border-radius: 12px; display: none; flex-direction: column; align-items: center; width: 100%; }
+    #qr-open-viewer.visible, #qr-offer-token.visible { display: flex; }
+    #qrbox-open-viewer, #qrbox-offer-token { width: min(320px, 75vw); height: min(320px, 75vw); display: flex; align-items: center; justify-content: center; }
+    #qrbox-open-viewer img, #qrbox-offer-token img { width: 100%; height: 100%; object-fit: contain; }
     #video-local, #video-remote { width: 100%; max-width: 640px; margin: 1em auto 0.5em auto; background: #000; border-radius: 10px; display: none; }
     #video-local.active, #video-remote.active { display: block; }
     .full-width { width: 100%; }
     .label { font-weight: 700; margin-top: 0.4em; }
     .hint { font-size: 0.92em; color: #555; }
-    body.viewer-simple #broadcast-url-block,
-    body.viewer-simple #qr-offer,
-    body.viewer-simple #broadcaster-controls,
     body.viewer-simple .mode-buttons,
-    body.viewer-simple #url-mode-hint {
+    body.viewer-simple #broadcaster-controls,
+    body.viewer-simple #qr-open-viewer,
+    body.viewer-simple #qr-offer-token,
+    body.viewer-simple #broadcast-url-block,
+    body.viewer-simple #url-mode-hint,
+    body.viewer-simple #video-local {
       display: none !important;
     }
     @media (max-width:600px) { .mode-buttons { flex-direction: column; } .center-block { padding: 1em; } }
@@ -40,7 +41,7 @@
 <body>
   <div class="center-block">
     <h2>ShareScreenRTC (Serverless)</h2>
-    <div class="hint">No server. Computer generates QR/link, phone opens URL, and returns answer token.</div>
+    <div class="hint">Scan QR to open compact viewer page. Paste/scan offer token there, generate answer token, transfer back manually.</div>
     <div class="hint" id="url-mode-hint"></div>
 
     <div class="mode-buttons">
@@ -49,24 +50,32 @@
     </div>
 
     <div id="broadcast-url-block" class="full-width hidden">
-      <div class="label">Phone data:text URL:</div>
-      <textarea id="broadcast-url-code" rows="3" readonly></textarea>
-      <button id="copy-broadcast-url">Copy Broadcast URL</button>
+      <div class="label">Viewer website URL:</div>
+      <textarea id="broadcast-url-code" rows="2" readonly></textarea>
+      <button id="copy-broadcast-url">Copy Viewer URL</button>
     </div>
 
     <video id="video-local" muted playsinline controls></video>
     <video id="video-remote" playsinline controls autoplay></video>
 
-    <div id="qr-offer">
-      <b>1) Scan this QR on your phone</b>
-      <div id="qrbox-offer"></div>
-      <div id="qr-status" class="hidden"></div>
-      <div class="hint">Phone opens viewer mode and creates answer token.</div>
+    <div id="qr-open-viewer">
+      <b>1) Scan this QR to open compact viewer page</b>
+      <div id="qrbox-open-viewer"></div>
+      <div class="hint">No WebRTC data in this URL.</div>
+    </div>
+
+    <div id="qr-offer-token">
+      <b>2) In viewer page, paste token manually OR scan this offer-token QR</b>
+      <div id="qrbox-offer-token"></div>
     </div>
 
     <div class="full-width" id="broadcaster-controls">
-      <div class="label">Compact response token (from phone):</div>
-      <textarea id="response-token" rows="4" placeholder="Type/paste compact token"></textarea>
+      <div class="label">Offer token (give this to phone):</div>
+      <textarea id="offer-token" rows="4" readonly></textarea>
+      <button id="copy-offer-token">Copy Offer Token</button>
+
+      <div class="label">Answer token (from phone):</div>
+      <textarea id="response-token" rows="4" placeholder="Paste answer token"></textarea>
       <button id="apply-answer">Apply Response</button>
 
       <div class="label">Connection log:</div>
@@ -74,6 +83,10 @@
     </div>
 
     <div id="viewer-panel" class="full-width hidden">
+      <div class="label">Offer token input (manual or scanned):</div>
+      <textarea id="viewer-offer-token" rows="4" placeholder="Paste offer token or full URL with ?offer=..."></textarea>
+      <button id="process-offer">Process Offer</button>
+
       <div class="label">Answer token:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
       <button id="copy-response-token">Copy answer token</button>
@@ -89,14 +102,18 @@
     const btnView = document.getElementById('btn-view');
     const videoLocal = document.getElementById('video-local');
     const videoRemote = document.getElementById('video-remote');
-    const qrOffer = document.getElementById('qr-offer');
-    const qrboxOffer = document.getElementById('qrbox-offer');
-    const qrStatus = document.getElementById('qr-status');
+    const qrOpenViewer = document.getElementById('qr-open-viewer');
+    const qrOfferToken = document.getElementById('qr-offer-token');
+    const qrboxOpenViewer = document.getElementById('qrbox-open-viewer');
+    const qrboxOfferToken = document.getElementById('qrbox-offer-token');
     const responseTokenInput = document.getElementById('response-token');
+    const offerTokenInput = document.getElementById('offer-token');
+    const copyOfferTokenBtn = document.getElementById('copy-offer-token');
     const applyAnswerBtn = document.getElementById('apply-answer');
-    const broadcasterControls = document.getElementById('broadcaster-controls');
     const viewerPanel = document.getElementById('viewer-panel');
+    const viewerOfferToken = document.getElementById('viewer-offer-token');
     const viewerResponseToken = document.getElementById('viewer-response-token');
+    const processOfferBtn = document.getElementById('process-offer');
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
     const urlModeHint = document.getElementById('url-mode-hint');
@@ -111,22 +128,14 @@
 
     function generateQR(container, value) {
       container.innerHTML = '';
-      qrStatus.classList.add('hidden');
-      qrStatus.textContent = '';
-      if (typeof qrcode !== 'function') {
-        qrStatus.textContent = 'QR library did not load. Use the Broadcast URL text below.';
-        qrStatus.classList.remove('hidden');
-        return false;
-      }
+      if (typeof qrcode !== 'function') return false;
       try {
         const qr = qrcode(0, 'L');
         qr.addData(value);
         qr.make();
         container.innerHTML = qr.createImgTag(6, 0);
         return true;
-      } catch (err) {
-        qrStatus.textContent = `QR generation failed: ${err}`;
-        qrStatus.classList.remove('hidden');
+      } catch {
         return false;
       }
     }
@@ -188,34 +197,17 @@
       for (const rawLine of lines) {
         const line = rawLine.trimEnd();
         if (!line) continue;
-
-        if (line.startsWith('m=')) {
-          sectionKey = line;
-          out.push(line);
-          continue;
-        }
-
+        if (line.startsWith('m=')) { sectionKey = line; out.push(line); continue; }
         if (line.startsWith('a=candidate:')) {
           const normalized = ` ${line.toLowerCase()} `;
           const preferred = normalized.includes(' udp ') && normalized.includes(' typ host ');
-          if (!keptBySection.has(sectionKey) && preferred) {
-            out.push(line);
-            keptBySection.add(sectionKey);
-          } else if (!keptBySection.has(sectionKey) && !normalized.includes(' tcp ')) {
-            out.push(line);
-            keptBySection.add(sectionKey);
-          }
+          if (!keptBySection.has(sectionKey) && preferred) { out.push(line); keptBySection.add(sectionKey); }
+          else if (!keptBySection.has(sectionKey) && !normalized.includes(' tcp ')) { out.push(line); keptBySection.add(sectionKey); }
           continue;
         }
-
-        if (line.startsWith('a=end-of-candidates')) {
-          if (keptBySection.has(sectionKey)) out.push(line);
-          continue;
-        }
-
+        if (line.startsWith('a=end-of-candidates')) { if (keptBySection.has(sectionKey)) out.push(line); continue; }
         out.push(line);
       }
-
       return `${out.join('\r\n')}\r\n`;
     }
 
@@ -223,17 +215,8 @@
       const mode = url.searchParams.get('mode');
       if (mode === 'view') {
         document.body.classList.add('viewer-simple');
-        btnCast.classList.add('hidden');
-        btnView.classList.add('hidden');
-        broadcasterControls.classList.add('hidden');
         viewerPanel.classList.remove('hidden');
         urlModeHint.textContent = 'Viewer mode loaded from URL.';
-      } else if (mode === 'cast') {
-        document.body.classList.remove('viewer-simple');
-        btnView.classList.add('hidden');
-        btnCast.classList.remove('hidden');
-        broadcasterControls.classList.remove('hidden');
-        urlModeHint.textContent = 'Broadcaster mode loaded from URL.';
       } else {
         document.body.classList.remove('viewer-simple');
         viewerPanel.classList.add('hidden');
@@ -248,18 +231,6 @@
       return url.toString();
     }
 
-    function buildViewUrl(offerEncoded = '') {
-      const base = getSharePageUrlBase();
-      if (offerEncoded) return `${base}?mode=view&offer=${encodeURIComponent(offerEncoded)}`;
-      return `${base}?mode=view`;
-    }
-
-    function buildMobileViewerDataUrl(offerObj) {
-      const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
-      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><video id=v autoplay playsinline controls></video><div>Answer token</div><textarea id=t rows=6 readonly></textarea><script>(async()=>{const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=ev=>{if(ev.streams&&ev.streams[0])document.getElementById('v').srcObject=ev.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const token='P'+e(JSON.stringify({a:s}));document.getElementById('t').value=token;})();<\/script>`;
-      return `data:text/html,${mobileHtml}`;
-    }
-
     function createPeerConnection(isOfferer, stream = null) {
       pc = new RTCPeerConnection({ iceServers: [] });
 
@@ -268,23 +239,26 @@
           if (isOfferer) {
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
-            const shareUrl = buildMobileViewerDataUrl(offerObj);
+            const offerToken = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
+            offerTokenInput.value = offerToken;
 
-            history.replaceState({}, '', `${location.pathname}?mode=cast`);
-            const qrOk = generateQR(qrboxOffer, shareUrl);
-            qrOffer.classList.add('visible');
-            broadcastUrlCode.value = shareUrl;
+            const viewerUrl = `${getSharePageUrlBase()}?mode=view`;
+            broadcastUrlCode.value = viewerUrl;
             broadcastUrlBlock.classList.remove('hidden');
-            console.log('[ShareScreenRTC] Phone data URL:', shareUrl);
-            log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated data:text URL below.');
+            qrOpenViewer.classList.add('visible');
+            qrOfferToken.classList.add('visible');
+            const openQrOk = generateQR(qrboxOpenViewer, viewerUrl);
+            const offerQrOk = generateQR(qrboxOfferToken, offerToken);
+            log((openQrOk && offerQrOk)
+              ? 'Viewer URL QR + Offer token QR are ready.'
+              : 'QR generation failed; use text fields manually.');
           } else {
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const payload = { a: slimAnswerSdp };
             const token = await encodeCompactPayload(payload);
-
-            viewerPanel.classList.remove('hidden');
             viewerResponseToken.value = token;
-            log('Viewer answer token is ready. Share token with broadcaster.');
+            viewerPanel.classList.remove('hidden');
+            log('Answer token is ready. Transfer it to broadcaster manually.');
           }
         }
       };
@@ -298,7 +272,6 @@
           if (event.streams && event.streams[0]) {
             videoRemote.srcObject = event.streams[0];
             videoRemote.classList.add('active');
-            log('Remote video stream received.');
           }
         };
       }
@@ -320,37 +293,59 @@
     }
 
     async function startBroadcast() {
-      broadcastUrlCode.value = 'Preparing broadcast URL...';
-      broadcastUrlBlock.classList.remove('hidden');
-      qrOffer.classList.add('visible');
-      qrboxOffer.innerHTML = '<div class="hint">Starting broadcast...</div>';
+      qrOpenViewer.classList.remove('visible');
+      qrOfferToken.classList.remove('visible');
+      offerTokenInput.value = '';
+      broadcastUrlCode.value = '';
 
       try {
         localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
       } catch (e) {
-        broadcastUrlCode.value = '';
-        broadcastUrlBlock.classList.add('hidden');
-        qrOffer.classList.remove('visible');
         alert(`Failed to capture screen: ${e}`);
         return;
       }
 
-      qrStatus.classList.add('hidden');
-      qrStatus.textContent = '';
       createPeerConnection(true, localStream);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       log('Broadcast started.');
     }
 
-    async function joinBroadcast(offerEncoded) {
-      const offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(offerEncoded)));
+    function extractOfferToken(raw) {
+      const input = raw.trim();
+      if (!input) return '';
+      if (input.includes('?')) {
+        try {
+          const u = new URL(input);
+          return u.searchParams.get('offer') || '';
+        } catch {
+          return input;
+        }
+      }
+      return input;
+    }
+
+    async function processOfferInViewer() {
+      const token = extractOfferToken(viewerOfferToken.value);
+      if (!token) {
+        alert('Enter/paste offer token first.');
+        return;
+      }
+
+      let offerObj;
+      try {
+        offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(token)));
+      } catch (e) {
+        alert(`Invalid offer token: ${e}`);
+        return;
+      }
+
       createPeerConnection(false);
       videoRemote.classList.add('active');
       await pc.setRemoteDescription(offerObj);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      log('Joined as viewer. Creating answer...');
+      log('Offer processed. Creating answer token...');
     }
 
     async function applyResponseFromInputs() {
@@ -358,7 +353,6 @@
         alert('Start broadcast first.');
         return;
       }
-
       const token = responseTokenInput.value.trim();
       if (!token) {
         alert('Paste/enter compact response token.');
@@ -372,7 +366,6 @@
         alert(`Cannot decode token: ${e}`);
         return;
       }
-
       if (!payload || !payload.a) {
         alert('Invalid response token.');
         return;
@@ -383,42 +376,37 @@
     }
 
     btnCast.onclick = () => startBroadcast();
-
-    btnView.onclick = async () => {
-      const url = new URL(location.href);
-      const offer = url.searchParams.get('offer');
-      if (!offer) {
-        alert('Open this page from QR link that includes offer.');
-        return;
-      }
-      await joinBroadcast(decodeURIComponent(offer));
+    btnView.onclick = () => {
+      document.body.classList.add('viewer-simple');
+      viewerPanel.classList.remove('hidden');
+      urlModeHint.textContent = 'Viewer mode enabled.';
     };
-
+    processOfferBtn.onclick = () => processOfferInViewer();
     applyAnswerBtn.onclick = () => applyResponseFromInputs();
+
+    copyOfferTokenBtn.onclick = async () => {
+      if (!offerTokenInput.value) return;
+      await navigator.clipboard.writeText(offerTokenInput.value);
+      log('Offer token copied.');
+    };
 
     copyResponseTokenBtn.onclick = async () => {
       if (!viewerResponseToken.value) return;
       await navigator.clipboard.writeText(viewerResponseToken.value);
-      log('Compact response token copied.');
+      log('Answer token copied.');
     };
 
     copyBroadcastUrlBtn.onclick = async () => {
       if (!broadcastUrlCode.value) return;
       await navigator.clipboard.writeText(broadcastUrlCode.value);
-      log('Broadcast URL copied.');
+      log('Viewer URL copied.');
     };
 
-    window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', () => {
       const url = new URL(location.href);
       setPageStateFromUrl(url);
-
-      const mode = url.searchParams.get('mode');
-      const offer = url.searchParams.get('offer');
-
-      if (mode === 'view' && offer) {
-        log('Offer found in URL. Auto-joining as viewer.');
-        await joinBroadcast(decodeURIComponent(offer));
-      }
+      const offerParam = url.searchParams.get('offer');
+      if (offerParam) viewerOfferToken.value = offerParam;
     });
   </script>
 </body>
