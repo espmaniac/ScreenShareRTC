@@ -26,6 +26,14 @@
     .full-width { width: 100%; }
     .label { font-weight: 700; margin-top: 0.4em; }
     .hint { font-size: 0.92em; color: #555; }
+    body.viewer-simple #broadcast-url-block,
+    body.viewer-simple #qr-offer,
+    body.viewer-simple #broadcaster-controls,
+    body.viewer-simple .mode-buttons,
+    body.viewer-simple #url-mode-hint {
+      display: none !important;
+    }
+
     @media (max-width:600px) { .mode-buttons { flex-direction: column; } .center-block { padding: 1em; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
@@ -57,7 +65,7 @@
       <div class="hint">Phone opens viewer mode with offer included in URL.</div>
     </div>
 
-    <div class="full-width">
+    <div class="full-width" id="broadcaster-controls">
       <div class="label">Site code:</div>
       <input id="site-code" type="text" readonly>
 
@@ -69,17 +77,16 @@
 
       <button id="apply-answer">Apply Response</button>
 
-      <div id="viewer-panel" class="hidden">
-        <div class="label">Phone response code:</div>
-        <input id="viewer-response-code" type="text" readonly>
-
-        <div class="label">Compact response token:</div>
-        <textarea id="viewer-response-token" rows="4" readonly></textarea>
-        <button id="copy-response-token">Copy response token</button>
-      </div>
-
       <div class="label">Connection log:</div>
       <textarea id="datachannel-log" rows="8" readonly></textarea>
+    </div>
+
+    <div id="viewer-panel" class="full-width hidden">
+      <div class="label">Answer code:</div>
+      <input id="viewer-response-code" type="text" readonly>
+      <div class="label">Answer token:</div>
+      <textarea id="viewer-response-token" rows="4" readonly></textarea>
+      <button id="copy-response-token">Copy answer token</button>
     </div>
   </div>
 
@@ -100,6 +107,7 @@
     const responseCodeInput = document.getElementById('response-code');
     const responseTokenInput = document.getElementById('response-token');
     const applyAnswerBtn = document.getElementById('apply-answer');
+    const broadcasterControls = document.getElementById('broadcaster-controls');
     const viewerPanel = document.getElementById('viewer-panel');
     const viewerResponseCode = document.getElementById('viewer-response-code');
     const viewerResponseToken = document.getElementById('viewer-response-token');
@@ -249,14 +257,21 @@
         siteCodeInput.value = currentSiteCode;
       }
       if (mode === 'view') {
+        document.body.classList.add('viewer-simple');
         btnCast.classList.add('hidden');
-        btnView.classList.remove('hidden');
+        btnView.classList.add('hidden');
+        broadcasterControls.classList.add('hidden');
+        viewerPanel.classList.remove('hidden');
         urlModeHint.textContent = `Viewer mode loaded from URL code${code ? `: ${code}` : ''}.`;
       } else if (mode === 'cast') {
+        document.body.classList.remove('viewer-simple');
         btnView.classList.add('hidden');
         btnCast.classList.remove('hidden');
+        broadcasterControls.classList.remove('hidden');
         urlModeHint.textContent = `Broadcaster mode loaded from URL code${code ? `: ${code}` : ''}.`;
       } else {
+        document.body.classList.remove('viewer-simple');
+        viewerPanel.classList.add('hidden');
         urlModeHint.textContent = '';
       }
     }
@@ -342,8 +357,8 @@
       }
       currentSiteCode = randomCode(8);
       siteCodeInput.value = currentSiteCode;
-      broadcastUrlCode.value = '';
-      broadcastUrlBlock.classList.add('hidden');
+      broadcastUrlCode.value = 'Generating broadcast URL...';
+      broadcastUrlBlock.classList.remove('hidden');
       qrOffer.classList.add('visible');
       qrboxOffer.innerHTML = '<div class="hint">Preparing QR...</div>';
       createPeerConnection(true, localStream);
@@ -357,6 +372,7 @@
       siteCodeInput.value = currentSiteCode;
       const offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(offerEncoded)));
       createPeerConnection(false);
+      videoRemote.classList.add('active');
       await pc.setRemoteDescription(offerObj);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
