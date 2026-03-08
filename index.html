@@ -9,530 +9,329 @@
   <style>
     html, body { height: 100%; margin: 0; padding: 0; width: 100vw; min-height: 100vh; box-sizing: border-box; }
     body { min-height: 100vh; width: 100vw; background-color: #2b3137; display: flex; align-items: center; justify-content: center; }
-    .center-block {
-      background: #fff;
-      border-radius: 22px;
-      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
-      padding: 2.5em 2.2em 2em 2.2em;
-      max-width: 720px;
-      width: 92vw;
-      min-width: 320px;
-      margin: 2em auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      border: 1px solid rgba(200,200,200,0.18);
-      box-sizing: border-box;
-    }
-    h2 { text-align: center; margin-bottom: 1.4em; font-weight: 700; letter-spacing: 0.02em; color: #444; font-size: 1.4em; }
-    button { margin: 0.2em 0.5em 0.2em 0; padding: 0.55em 1.2em; border-radius: 7px; border: none; background: #f3f3f3; color: #333; font-weight: 600; font-size: 1em; cursor: pointer; box-shadow: 0 2px 8px rgba(250,218,97,0.07); transition: background 0.18s, color 0.18s, box-shadow 0.18s; outline: none;}
-    button:hover, button:focus { background: rgb(255, 145, 136, 0.15); color: #d82a72; box-shadow: 0 4px 18px rgba(255,90,205,0.12);}
+    .center-block { background: #fff; border-radius: 22px; box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18); padding: 2em; max-width: 780px; width: 92vw; min-width: 320px; margin: 2em auto; display: flex; flex-direction: column; align-items: center; }
+    h2 { text-align: center; margin-bottom: 0.8em; color: #444; }
+    button { margin: 0.2em 0.5em 0.2em 0; padding: 0.55em 1.2em; border-radius: 7px; border: none; background: #f3f3f3; color: #333; font-weight: 600; cursor: pointer; }
+    button:hover, button:focus { background: rgba(255,145,136,0.15); color: #d82a72; }
     .hidden { display: none; }
-    #sdp-section, #manual-section, #answer-section { margin: 1.1em 0 0.7em 0; width: 100%;}
-    textarea, input[type="text"] { width: 100%; font-family: monospace; font-size: 0.98em; border-radius: 6px; border: 1.5px solid #eee; padding: 0.5em; margin: 0.2em 0 0.7em 0; box-sizing: border-box; transition: border 0.18s, box-shadow 0.18s; background: #faf9fd; resize: vertical; min-height: 2.5em; outline: none; }
-    textarea:focus, input[type="text"]:focus { border: 1.5px solid #ff90cd; background: #fff; box-shadow: 0 2px 12px rgba(255,90,205,0.07);}
-    #qr-offer {
-      margin: 1.2em 0 1.1em 0;
-      padding: 0.7em;
-      background: #fff;
-      border-radius: 12px;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      box-shadow: 0 2px 18px 0 rgba(255, 90, 205, 0.07);
-      width: 100%;
-      box-sizing: border-box;
-    }
+    textarea, input[type="text"] { width: 100%; font-family: monospace; border-radius: 6px; border: 1.5px solid #eee; padding: 0.5em; margin: 0.2em 0 0.7em 0; box-sizing: border-box; background: #faf9fd; }
+    .mode-buttons { width: 100%; display: flex; justify-content: center; gap: 0.8em; margin-bottom: 0.8em; }
+    #qr-offer { margin: 1em 0; padding: 0.7em; background: #fff; border-radius: 12px; display: none; flex-direction: column; align-items: center; width: 100%; }
     #qr-offer.visible { display: flex; }
-    #qrbox {
-      width: 60%;
-      height: 60%;
-      max-width: 320px;
-      max-height: 320px;
-      min-width: 120px;
-      min-height: 120px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 0 auto;
-    }
-    #qrbox img, #qrbox canvas {
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      display: block;
-      object-fit: contain;
-    }
-    #qr-offer .error { color: #d33; font-weight: bold; margin: 1em 0 0.5em 0; text-align: center; font-size: 1.05em;}
-    #qr-offer .info { color: #555; font-size: 0.92em; margin-top: 0.6em;}
-    #datachannel-log { min-height: 6em; max-height: 12em; margin-bottom: 0.6em;}
-    .mode-buttons { width: 100%; display: flex; justify-content: center; gap: 0.8em; margin-bottom: 1.3em;}
-    .view-block, .cast-block { width: 100%; }
-    #answer-section { margin-bottom: 1em; }
-    #video-local, #video-remote {
-      width: 100%;
-      max-width: 640px;
-      margin: 1em auto 0.5em auto;
-      background: #000;
-      border-radius: 10px;
-      display: none;
-    }
-    #video-local.active, #video-remote.active {
-      display: block;
-    }
-    .center-block.fullscreen {
-      width: 100vw !important;
-      height: 100vh !important;
-      max-width: 100vw !important;
-      max-height: 100vh !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #fff;
-    }
-    .center-block.fullscreen > *:not(.mode-buttons):not(#video-local):not(#video-remote) {
-      display: none !important;
-    }
-    .center-block.fullscreen .mode-buttons {
-      display: flex !important;
-      flex-direction: column;
-      gap: 1.8em;
-      justify-content: center;
-      width: 100vw;
-      align-items: center;
-    }
-    @media (max-width:600px) {
-      .center-block { padding: 1.2em 0.5em 1.2em 0.5em; max-width: 98vw;}
-      h2 { font-size: 1em;}
-      .mode-buttons { flex-direction: column; gap: 0.3em; }
-      #qrbox {
-        width: 90%;
-        height: 40vw;
-        max-width: 95vw;
-        max-height: 95vw;
-        min-width: 80px;
-        min-height: 80px;
-      }
-      #video-local, #video-remote {
-        max-width: 97vw;
-      }
-      .center-block.fullscreen .mode-buttons { width: 100vw; }
-    }
+    #qrbox-offer { width: min(320px, 75vw); height: min(320px, 75vw); display: flex; align-items: center; justify-content: center; }
+    #qrbox-offer img { width: 100%; height: 100%; object-fit: contain; }
+    #video-local, #video-remote { width: 100%; max-width: 640px; margin: 1em auto 0.5em auto; background: #000; border-radius: 10px; display: none; }
+    #video-local.active, #video-remote.active { display: block; }
+    .full-width { width: 100%; }
+    .label { font-weight: 700; margin-top: 0.4em; }
+    .hint { font-size: 0.92em; color: #555; }
+    @media (max-width:600px) { .mode-buttons { flex-direction: column; } .center-block { padding: 1em; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 </head>
 <body>
   <div class="center-block">
-    <h2>ShareScreenRTC</h2>
+    <h2>ShareScreenRTC (Serverless)</h2>
+    <div class="hint">No server. Offer is shared by QR; response is typed as short code + compact token.</div>
+
     <div class="mode-buttons">
       <button id="btn-cast">Start Broadcast</button>
-      <button id="btn-view">View Broadcast</button>
+      <button id="btn-view">Join Broadcast</button>
     </div>
+
     <video id="video-local" muted playsinline controls></video>
-    <video id="video-remote" playsinline controls></video>
+    <video id="video-remote" playsinline controls autoplay></video>
+
     <div id="qr-offer">
-      <b>QR code for sharing Offer (opens site with SDP):</b>
-      <div id="qrbox"></div>
-      <div id="qr-error" class="error hidden"></div>
-      <div class="info">Scan the QR code on your phone — the site will open and SDP will be handled automatically</div>
+      <b>1) Scan this QR on your phone</b>
+      <div id="qrbox-offer"></div>
+      <div class="hint">Phone opens viewer mode with offer included in URL.</div>
     </div>
-    <div class="cast-block hidden" id="cast-block">
-      <button id="manual-answer">Enter Answer Manually</button>
-      <div id="answer-section" class="hidden">
-        <b>Answer from server:</b>
-        <textarea id="answer-text" rows="8" readonly></textarea>
-        <button id="copy-answer">Copy</button>
+
+    <div class="full-width">
+      <div class="label">Site code:</div>
+      <input id="site-code" type="text" readonly>
+
+      <div class="label">WebRTC response code (6-8 chars):</div>
+      <input id="response-code" type="text" maxlength="8" placeholder="Type only 6-8 chars from phone">
+
+      <div class="label">Compact response token (from phone):</div>
+      <textarea id="response-token" rows="4" placeholder="Type/paste compact token"></textarea>
+
+      <button id="apply-answer">Apply Response</button>
+
+      <div id="viewer-panel" class="hidden">
+        <div class="label">Phone response code:</div>
+        <input id="viewer-response-code" type="text" readonly>
+
+        <div class="label">Compact response token:</div>
+        <textarea id="viewer-response-token" rows="4" readonly></textarea>
+        <button id="copy-response-token">Copy response token</button>
       </div>
-    </div>
-    <div class="view-block hidden" id="view-block">
-      <button id="get-offer">Load Offer from server</button>
-      <button id="manual-offer">Enter Offer Manually</button>
-    </div>
-    <div id="sdp-section" class="hidden">
-      <b>SDP (Offer/Answer):</b><br>
-      <textarea id="sdp-text" rows="8" readonly></textarea><br>
-      <button id="copy-sdp">Copy</button>
-    </div>
-    <div id="manual-section" class="hidden">
-      <b>Paste Offer/Answer below:</b><br>
-      <textarea id="manual-sdp" rows="8" placeholder="Paste Offer or Answer here"></textarea><br>
-      <button id="manual-process">Process</button>
-    </div>
-    <div style="width:100%;">
-      <textarea id="datachannel-log" rows="8" placeholder="Connection log..."></textarea>
+
+      <div class="label">Connection log:</div>
+      <textarea id="datachannel-log" rows="8" readonly></textarea>
     </div>
   </div>
+
   <script>
-let SERVER = "http://127.0.0.1:5000";
-let SERVER_IP = "127.0.0.1";
-let answerPollTimer = null;
+    let pc;
+    let dataChannel;
+    let localStream = null;
+    let currentSiteCode = '';
 
-fetch("http://127.0.0.1:5000/myip")
-  .then(response => response.text())
-  .then(ip => {
-    SERVER_IP = ip.trim();
-    const h2 = document.querySelector('h2');
-    if (h2) {
-      h2.insertAdjacentHTML('afterend', `<div style="margin:0.5em 0 1.2em 0;font-size:0.93em;color:#666;">Server IP: <b>${ip}</b></div>`);
+    const btnCast = document.getElementById('btn-cast');
+    const btnView = document.getElementById('btn-view');
+    const videoLocal = document.getElementById('video-local');
+    const videoRemote = document.getElementById('video-remote');
+    const qrOffer = document.getElementById('qr-offer');
+    const qrboxOffer = document.getElementById('qrbox-offer');
+    const siteCodeInput = document.getElementById('site-code');
+    const responseCodeInput = document.getElementById('response-code');
+    const responseTokenInput = document.getElementById('response-token');
+    const applyAnswerBtn = document.getElementById('apply-answer');
+    const viewerPanel = document.getElementById('viewer-panel');
+    const viewerResponseCode = document.getElementById('viewer-response-code');
+    const viewerResponseToken = document.getElementById('viewer-response-token');
+    const copyResponseTokenBtn = document.getElementById('copy-response-token');
+    const logArea = document.getElementById('datachannel-log');
+
+    function log(msg) {
+      logArea.value += `${new Date().toLocaleTimeString()} - ${msg}\n`;
+      logArea.scrollTop = logArea.scrollHeight;
     }
-  })
-  .catch(()=>{});
 
-let pc;
-let dataChannel;
-let localStream = null;
-const btnCast = document.getElementById("btn-cast");
-const btnView = document.getElementById("btn-view");
-const castBlock = document.getElementById("cast-block");
-const viewBlock = document.getElementById("view-block");
-const btnGetOffer = document.getElementById("get-offer");
-const btnManualOffer = document.getElementById("manual-offer");
-const btnManualAnswer = document.getElementById("manual-answer");
-const sdpSection = document.getElementById('sdp-section');
-const sdpText = document.getElementById('sdp-text');
-const copySdpBtn = document.getElementById('copy-sdp');
-const manualSection = document.getElementById('manual-section');
-const manualSdp = document.getElementById('manual-sdp');
-const manualProcess = document.getElementById('manual-process');
-const qrOffer = document.getElementById('qr-offer');
-const qrbox = document.getElementById('qrbox');
-const qrError = document.getElementById('qr-error');
-const logArea = document.getElementById("datachannel-log");
-const answerSection = document.getElementById("answer-section");
-const answerText = document.getElementById("answer-text");
-const copyAnswerBtn = document.getElementById("copy-answer");
-const videoLocal = document.getElementById("video-local");
-const videoRemote = document.getElementById("video-remote");
-const centerBlock = document.querySelector(".center-block");
+    function randomCode(length = 8) {
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const arr = new Uint8Array(length);
+      crypto.getRandomValues(arr);
+      return [...arr].map(v => alphabet[v % alphabet.length]).join('');
+    }
 
-function log(msg) {
-  logArea.value += msg + "\n";
-  logArea.scrollTop = logArea.scrollHeight;
-}
-function showSDP(sdp) {
-  sdpSection.classList.remove('hidden');
-  sdpText.value = sdp;
-}
-function hideSDP() {
-  sdpSection.classList.add('hidden');
-  sdpText.value = "";
-}
-function showManual() { manualSection.classList.remove('hidden'); manualSdp.value = ''; }
-function hideManual() { manualSection.classList.add('hidden'); manualSdp.value = ''; }
-function hideAllSignalButtons() {
-  btnManualAnswer.classList.add('hidden');
-  btnGetOffer.classList.add('hidden');
-  btnManualOffer.classList.add('hidden');
-}
-function showManualAnswerButton() { btnManualAnswer.classList.remove('hidden'); }
-function showCastBlock() { castBlock.classList.remove("hidden"); viewBlock.classList.add("hidden"); }
-function showViewBlock() { castBlock.classList.add("hidden"); viewBlock.classList.remove("hidden"); }
-function showQROffer() {
-  qrOffer.classList.add('visible');
-  while (qrbox.firstChild) qrbox.removeChild(qrbox.firstChild);
-  qrError.classList.add('hidden'); qrError.textContent = '';
-  const baseUrl = `http://${SERVER_IP}`;
-  const qrUrl = `${baseUrl}?type=view&ip=${SERVER_IP}`;
+    function generateQR(container, value) {
+      container.innerHTML = '';
+      const qr = qrcode(0, 'L');
+      qr.addData(value);
+      qr.make();
+      container.innerHTML = qr.createImgTag(6, 0);
+    }
 
-  try {
-    var qr = qrcode(0, 'L');
-    qr.addData(qrUrl); qr.make();
-    var qrImg = qr.createImgTag(6, 0);
-    qrbox.innerHTML = qrImg;
-  } catch(e) {
-    qrError.textContent = "QR generation error!";
-    qrError.classList.remove('hidden');
-  }
-}
-function hideQROffer() {
-  qrOffer.classList.remove('visible');
-  while (qrbox.firstChild) qrbox.removeChild(qrbox.firstChild);
-  qrError.classList.add('hidden'); qrError.textContent = '';
-}
-function createPeerConnection(isOfferer, streamForCast=null) {
-  pc = new RTCPeerConnection();
-  pc.onicecandidate = e => {
-    if (!e.candidate) {
-      const sdp = JSON.stringify(pc.localDescription);
-      showSDP(sdp);
-      if (isOfferer) {
-        sendOfferToServer(sdp);
-        showManualAnswerButton();
-        showQROffer();
-        startAnswerPolling();
-        btnView.classList.add('hidden');
+    async function shortCodeFromString(value, length = 6) {
+      const data = new TextEncoder().encode(value);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      const bytes = new Uint8Array(hash).slice(0, length);
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      return [...bytes].map(b => alphabet[b % alphabet.length]).join('');
+    }
+
+    function b64urlEncode(bytes) {
+      let binary = '';
+      bytes.forEach((b) => { binary += String.fromCharCode(b); });
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function b64urlDecode(str) {
+      const base64 = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(str.length / 4) * 4, '=');
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function gzipBytes(text) {
+      if (!window.CompressionStream) return null;
+      const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+      const buffer = await new Response(stream).arrayBuffer();
+      return new Uint8Array(buffer);
+    }
+
+    async function ungzipBytes(bytes) {
+      if (!window.DecompressionStream) return null;
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      const buffer = await new Response(stream).arrayBuffer();
+      return new TextDecoder().decode(buffer);
+    }
+
+    async function encodeCompactPayload(payloadObj) {
+      const json = JSON.stringify(payloadObj);
+      const gz = await gzipBytes(json);
+      if (gz && gz.length < json.length) return `G${b64urlEncode(gz)}`;
+      return `P${b64urlEncode(new TextEncoder().encode(json))}`;
+    }
+
+    async function decodeCompactPayload(token) {
+      if (!token || token.length < 2) throw new Error('Invalid token.');
+      const mode = token[0];
+      const bytes = b64urlDecode(token.slice(1));
+      if (mode === 'G') {
+        const json = await ungzipBytes(bytes);
+        if (!json) throw new Error('Gzip decode unavailable in this browser.');
+        return JSON.parse(json);
+      }
+      if (mode === 'P') return JSON.parse(new TextDecoder().decode(bytes));
+      throw new Error('Unknown token format.');
+    }
+
+    function createPeerConnection(isOfferer, stream = null) {
+      pc = new RTCPeerConnection({ iceServers: [] });
+
+      pc.onicecandidate = async (e) => {
+        if (!e.candidate) {
+          if (isOfferer) {
+            const offerObj = { type: pc.localDescription.type, sdp: pc.localDescription.sdp };
+            const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
+            const offerUrl = `${location.origin}${location.pathname}?mode=view&code=${currentSiteCode}&offer=${encodeURIComponent(offerEncoded)}`;
+            generateQR(qrboxOffer, offerUrl);
+            qrOffer.classList.add('visible');
+            log('Offer ready. Scan QR from phone to join.');
+          } else {
+            const answerObj = { type: pc.localDescription.type, sdp: pc.localDescription.sdp };
+            const answerStr = JSON.stringify(answerObj);
+            const responseCode = await shortCodeFromString(answerStr, 6);
+            const payload = { c: currentSiteCode, r: responseCode, a: answerObj.sdp };
+            const token = await encodeCompactPayload(payload);
+
+            viewerPanel.classList.remove('hidden');
+            viewerResponseCode.value = responseCode;
+            viewerResponseToken.value = token;
+
+            log(`Viewer response code: ${responseCode}`);
+            log('Share only code + compact token with broadcaster.');
+          }
+        }
+      };
+
+      if (isOfferer && stream) {
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        videoLocal.srcObject = stream;
+        videoLocal.classList.add('active');
       } else {
-        btnManualAnswer.classList.add('hidden');
-        hideQROffer();
+        pc.ontrack = (event) => {
+          if (event.streams && event.streams[0]) {
+            videoRemote.srcObject = event.streams[0];
+            videoRemote.classList.add('active');
+            log('Remote video stream received.');
+          }
+        };
       }
-    }
-  };
-  if (isOfferer && streamForCast) {
-    streamForCast.getTracks().forEach(track => {
-      pc.addTrack(track, streamForCast);
-    });
-    videoLocal.srcObject = streamForCast;
-    videoLocal.classList.add('active');
-  } else {
-    pc.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        videoRemote.srcObject = event.streams[0];
-        videoRemote.classList.add('active');
-      }
-    };
-    hideQROffer();
-  }
-  if (isOfferer) {
-    dataChannel = pc.createDataChannel("data");
-    setupDataChannel();
-  } else {
-    pc.ondatachannel = event => {
-      dataChannel = event.channel;
-      setupDataChannel();
-    };
-  }
-}
-async function sendOfferToServer(sdp) {
-  try {
-    await fetch(SERVER + "/offer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: sdp
-    });
-    log("Offer sent to server!");
-  } catch (e) {
-    alert("Error sending offer: " + e);
-  }
-}
-async function sendAnswerToServer(sdp) {
-  try {
-    await fetch(SERVER + "/answer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: sdp
-    });
-    log("Answer sent to server!");
-  } catch (e) {
-    log(e);
-    alert("Error sending answer: " + e);
-  }
-}
-function setupDataChannel() {
-  dataChannel.onopen = () => {
-    log("DataChannel opened!");
-    hideSDP();
-    hideAllSignalButtons();
-    hideQROffer();
-    hideAnswerSection();
-    stopAnswerPolling();
-    btnCast.classList.add("hidden");
-    btnView.classList.add("hidden");
-    centerBlock.classList.add('fullscreen');
-  };
-  dataChannel.onmessage = e => log("Received: " + e.data);
-}
-function showAnswerSection(answer) {
-  answerSection.classList.remove("hidden");
-  answerText.value = JSON.stringify(answer, null, 2);
-}
-function hideAnswerSection() {
-  answerSection.classList.add("hidden");
-  answerText.value = "";
-}
-function startAnswerPolling() {
-  stopAnswerPolling();
-  answerSection.classList.add("hidden");
-  answerText.value = "";
-  answerPollTimer = setInterval(async () => {
-    try {
-      let resp = await fetch(SERVER + "/get_answer");
-      let answer = await resp.json();
-      if (answer && answer.type) {
-        log("Answer received automatically!");
-        showAnswerSection(answer);
-        await handleAnswer(answer);
-        stopAnswerPolling();
-      }
-    } catch (e) {}
-  }, 2000);
-}
-function stopAnswerPolling() {
-  if (answerPollTimer) {
-    clearInterval(answerPollTimer);
-    answerPollTimer = null;
-  }
-}
-btnCast.onclick = async () => {
-  showCastBlock();
-  btnView.classList.add("hidden");
-  hideSDP(); hideManual(); hideQROffer(); hideAnswerSection();
-  try {
-    localStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: 60, max: 60 } },
-      audio: true
-    });
-  } catch (e) {
-    alert("Failed to capture tab/screen: " + e);
-    return;
-  }
-  createPeerConnection(true, localStream);
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  showManualAnswerButton();
-  videoLocal.srcObject = localStream;
-  videoLocal.classList.add('active');
-  videoRemote.classList.remove('active');
-  videoRemote.srcObject = null;
-  setTimeout(()=>{
-    const track = localStream.getVideoTracks()[0];
-    if (track) log("Actual FPS: " + (track.getSettings().frameRate || "(unknown)"));
-  }, 500);
-};
-btnView.onclick = () => {
-  showViewBlock();
-  btnView.classList.remove("hidden");
-  btnManualAnswer.classList.add("hidden");
-  hideSDP(); hideManual(); hideQROffer(); hideAnswerSection();
-  videoLocal.classList.remove('active');
-  videoLocal.srcObject = null;
-  videoRemote.classList.add('active');
-};
-btnGetOffer.onclick = async () => {
-  hideSDP(); hideManual(); hideQROffer(); hideAnswerSection();
-  try {
-    let resp = await fetch(SERVER + "/get_offer");
-    let offer = await resp.json();
-    if (!offer || !offer.type) {
-      alert("No Offer on server");
-      return;
-    }
-    showManual();
-    manualSdp.value = JSON.stringify(offer, null, 2);
-    setTimeout(() => manualProcess.click(), 100);
-    manualProcess.onclick = async () => {
-      try {
-        await handleOffer(offer);
-        hideManual();
-        hideAllSignalButtons();
-        hideQROffer();
-      } catch (e) {
-        alert("SDP error: " + e);
-      }
-    };
-    hideAllSignalButtons();
-    hideQROffer();
-  } catch (e) {
-    alert("Error loading offer: " + e);
-  }
-};
-btnManualOffer.onclick = () => {
-  hideSDP(); showManual(); hideQROffer(); hideAnswerSection();
-  manualProcess.onclick = async () => {
-    try {
-      const json = JSON.parse(manualSdp.value.trim());
-      await handleOffer(json);
-      hideManual();
-      hideAllSignalButtons();
-      hideQROffer();
-    } catch (e) {
-      alert("SDP error: " + e);
-    }
-  };
-  hideAllSignalButtons();
-  hideQROffer();
-};
-btnManualAnswer.onclick = () => {
-  hideSDP(); showManual(); hideQROffer(); hideAnswerSection();
-  manualProcess.onclick = async () => {
-    try {
-      const json = JSON.parse(manualSdp.value.trim());
-      await handleAnswer(json);
-      hideManual();
-      btnManualAnswer.classList.add('hidden');
-      hideQROffer();
-      hideAnswerSection();
-      stopAnswerPolling();
-    } catch (e) {
-      alert("SDP error: " + e);
-    }
-  };
-};
-copySdpBtn.onclick = () => {
-  const sdp = sdpText.value;
-  navigator.clipboard.writeText(sdp).then(() => alert("Copied!"));
-};
-copyAnswerBtn.onclick = () => {
-  const sdp = answerText.value;
-  if (sdp) navigator.clipboard.writeText(sdp).then(() => alert("Copied!"));
-};
-async function handleOffer(offerSDP) {
-  createPeerConnection(false);
-  await pc.setRemoteDescription(offerSDP);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  pc.onicecandidate = async e => {
-    if (!e.candidate) {
-      const sdp = JSON.stringify(pc.localDescription);
-      showSDP(sdp);
-      await sendAnswerToServer(sdp);
-    }
-  };
-  btnManualAnswer.classList.add('hidden');
-  hideQROffer();
-  hideAnswerSection();
-  stopAnswerPolling();
-  videoLocal.classList.remove('active');
-  videoLocal.srcObject = null;
-  videoRemote.classList.add('active');
-}
-async function handleAnswer(answerSDP) {
-  await pc.setRemoteDescription(answerSDP);
-  btnManualAnswer.classList.add('hidden');
-  log("Answer set!");
-  hideQROffer();
-  hideAnswerSection();
-  stopAnswerPolling();
-}
-window.addEventListener('beforeunload', stopAnswerPolling);
 
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const qrIp = urlParams.get('ip');
-  if (qrIp && location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
-    SERVER = "http://" + qrIp + ":5000";
-    const h2 = document.querySelector('h2');
-    if (h2) {
-      let note = document.createElement('div');
-      note.id = 'ip-from-qr';
-      note.style = "margin:0.2em 0 0.9em 0;font-size:0.92em;color:#387;";
-      h2.insertAdjacentElement('afterend', note);
-      note.innerHTML = `Server IP from QR: <b>${qrIp}</b>`;
+      if (isOfferer) {
+        dataChannel = pc.createDataChannel('data');
+        setupDataChannel();
+      } else {
+        pc.ondatachannel = (event) => {
+          dataChannel = event.channel;
+          setupDataChannel();
+        };
+      }
     }
-  }
-  if (urlParams.get('type') === 'view') {
-    btnView.click();
-    setTimeout(() => btnGetOffer.click(), 400);
-    return;
-  }
-  const sdp = urlParams.get('sdp');
-  if (sdp) {
-    try {
-      const sdpObj = JSON.parse(decodeURIComponent(sdp));
-      handleOffer(sdpObj);
-      log("SDP from QR code handled automatically!");
-    } catch (e) {
-      manualSection.classList.remove('hidden');
-      manualSdp.value = decodeURIComponent(sdp);
-      log("SDP found in URL, please paste or confirm processing.");
+
+    function setupDataChannel() {
+      dataChannel.onopen = () => log('DataChannel opened. WebRTC connected.');
+      dataChannel.onmessage = (e) => log(`Received: ${e.data}`);
     }
-  }
-});
+
+    async function startBroadcast() {
+      try {
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } catch (e) {
+        alert(`Failed to capture screen: ${e}`);
+        return;
+      }
+      currentSiteCode = randomCode(8);
+      siteCodeInput.value = currentSiteCode;
+      createPeerConnection(true, localStream);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      log(`Broadcast started. Site code: ${currentSiteCode}`);
+    }
+
+    async function joinBroadcast(offerEncoded, siteCode) {
+      currentSiteCode = siteCode || '';
+      siteCodeInput.value = currentSiteCode;
+      const offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(offerEncoded)));
+      createPeerConnection(false);
+      await pc.setRemoteDescription(offerObj);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      log('Joined as viewer. Creating answer...');
+    }
+
+    async function applyResponseFromInputs() {
+      if (!pc || !pc.localDescription || pc.localDescription.type !== 'offer') {
+        alert('Start broadcast first.');
+        return;
+      }
+
+      const typedCode = responseCodeInput.value.trim().toUpperCase();
+      if (typedCode.length < 6 || typedCode.length > 8) {
+        alert('Type only the 6-8 character response code.');
+        return;
+      }
+
+      const token = responseTokenInput.value.trim();
+      if (!token) {
+        alert('Paste/enter compact response token.');
+        return;
+      }
+
+      let payload;
+      try {
+        payload = await decodeCompactPayload(token);
+      } catch (e) {
+        alert(`Cannot decode token: ${e}`);
+        return;
+      }
+
+      if (!payload || !payload.a) {
+        alert('Invalid response token.');
+        return;
+      }
+      if (payload.c !== currentSiteCode) {
+        alert('Site code mismatch.');
+        return;
+      }
+      if ((payload.r || '').toUpperCase() !== typedCode) {
+        alert('Response code mismatch.');
+        return;
+      }
+
+      await pc.setRemoteDescription({ type: 'answer', sdp: payload.a });
+      log('Answer applied. Connection should establish shortly.');
+    }
+
+    btnCast.onclick = () => startBroadcast();
+
+    btnView.onclick = async () => {
+      const url = new URL(location.href);
+      const offer = url.searchParams.get('offer');
+      const siteCode = url.searchParams.get('code');
+      if (!offer) {
+        alert('Open this page from QR link that includes offer.');
+        return;
+      }
+      await joinBroadcast(decodeURIComponent(offer), siteCode);
+    };
+
+    applyAnswerBtn.onclick = () => applyResponseFromInputs();
+
+    copyResponseTokenBtn.onclick = async () => {
+      if (!viewerResponseToken.value) return;
+      await navigator.clipboard.writeText(viewerResponseToken.value);
+      log('Compact response token copied.');
+    };
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const url = new URL(location.href);
+      const mode = url.searchParams.get('mode');
+      const offer = url.searchParams.get('offer');
+      const siteCode = url.searchParams.get('code');
+
+      if (mode === 'view' && offer) {
+        log('Offer found in URL. Auto-joining as viewer.');
+        await joinBroadcast(decodeURIComponent(offer), siteCode);
+      }
+    });
   </script>
 </body>
 </html>
