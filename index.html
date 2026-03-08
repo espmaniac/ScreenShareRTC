@@ -49,7 +49,7 @@
     </div>
 
     <div id="broadcast-url-block" class="full-width hidden">
-      <div class="label">Website URL for phone:</div>
+      <div class="label">Phone data:text URL:</div>
       <textarea id="broadcast-url-code" rows="3" readonly></textarea>
       <button id="copy-broadcast-url">Copy Broadcast URL</button>
     </div>
@@ -254,6 +254,12 @@
       return `${base}?mode=view`;
     }
 
+    function buildMobileViewerDataUrl(offerObj) {
+      const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
+      const mobileHtml = `<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Viewer</title><video id=v autoplay playsinline controls></video><div>Answer token</div><textarea id=t rows=6 readonly></textarea><script>(async()=>{const O=${JSON.stringify(offerEncoded)};const d=u=>decodeURIComponent(escape(atob(u.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(u.length/4)*4,'='))));const e=x=>btoa(unescape(encodeURIComponent(x))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=ev=>{if(ev.streams&&ev.streams[0])document.getElementById('v').srcObject=ev.streams[0]};await pc.setRemoteDescription(JSON.parse(d(O)));const a=await pc.createAnswer();await pc.setLocalDescription(a);await new Promise(r=>{if(pc.iceGatheringState==='complete')return r();pc.addEventListener('icegatheringstatechange',()=>pc.iceGatheringState==='complete'&&r());setTimeout(r,4000)});const s=pc.localDescription.sdp;const token='P'+e(JSON.stringify({a:s}));document.getElementById('t').value=token;})();<\/script>`;
+      return `data:text/html;charset=utf-8,${encodeURIComponent(mobileHtml)}`;
+    }
+
     function createPeerConnection(isOfferer, stream = null) {
       pc = new RTCPeerConnection({ iceServers: [] });
 
@@ -262,17 +268,15 @@
           if (isOfferer) {
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
-            const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
-
-            const shareUrl = buildViewUrl(offerEncoded);
+            const shareUrl = buildMobileViewerDataUrl(offerObj);
 
             history.replaceState({}, '', `${location.pathname}?mode=cast`);
             const qrOk = generateQR(qrboxOffer, shareUrl);
             qrOffer.classList.add('visible');
             broadcastUrlCode.value = shareUrl;
             broadcastUrlBlock.classList.remove('hidden');
-            console.log('[ShareScreenRTC] Phone link:', shareUrl);
-            log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated website URL below.');
+            console.log('[ShareScreenRTC] Phone data URL:', shareUrl);
+            log(qrOk ? 'Broadcast and QR started. Scan QR on phone.' : 'Broadcast started. QR unavailable; use generated data:text URL below.');
           } else {
             const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
             const payload = { a: slimAnswerSdp };
