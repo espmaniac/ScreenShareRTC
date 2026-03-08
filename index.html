@@ -86,7 +86,6 @@
       <div class="label">Offer token input (manual or scanned):</div>
       <textarea id="viewer-offer-token" rows="4" placeholder="Paste offer token"></textarea>
       <button id="process-offer">Process Offer</button>
-      <button id="scan-offer">Scan Offer QR</button>
 
       <div class="label">Answer token:</div>
       <textarea id="viewer-response-token" rows="4" readonly></textarea>
@@ -115,7 +114,6 @@
     const viewerOfferToken = document.getElementById('viewer-offer-token');
     const viewerResponseToken = document.getElementById('viewer-response-token');
     const processOfferBtn = document.getElementById('process-offer');
-    const scanOfferBtn = document.getElementById('scan-offer');
     const copyResponseTokenBtn = document.getElementById('copy-response-token');
     const logArea = document.getElementById('datachannel-log');
     const urlModeHint = document.getElementById('url-mode-hint');
@@ -227,7 +225,7 @@
     }
 
     function buildViewerDataUrl() {
-      const html = `<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><title>Viewer</title><body><textarea id=o rows=4 style=width:100% placeholder='Paste/scan offer token'></textarea><button id=p>Process</button><button id=s>Scan QR</button><video id=v autoplay playsinline controls style='width:100%;background:#000;display:none'></video><textarea id=a rows=4 readonly style=width:100% placeholder='Answer token'></textarea><button id=c>Copy Answer</button><script>let pc,st,t;const o=document.getElementById('o'),a=document.getElementById('a'),v=document.getElementById('v');const b=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'='));const u=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');p.onclick=async()=>{try{pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0]){v.srcObject=e.streams[0];v.style.display='block';}};pc.onicecandidate=e=>{if(!e.candidate)a.value='P'+u(JSON.stringify({a:pc.localDescription.sdp}))};await pc.setRemoteDescription(JSON.parse(b(o.value.trim())));await pc.setLocalDescription(await pc.createAnswer());}catch(e){alert('Invalid offer token: '+e)}};c.onclick=async()=>a.value&&navigator.clipboard.writeText(a.value);s.onclick=async()=>{if(!window.BarcodeDetector)return alert('BarcodeDetector not supported.');try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});const vd=document.createElement('video');vd.srcObject=st;await vd.play();const d=new BarcodeDetector({formats:['qr_code']});t=setInterval(async()=>{const r=await d.detect(vd);if(r[0]){o.value=r[0].rawValue.trim();clearInterval(t);st.getTracks().forEach(x=>x.stop())}},250)}catch(e){alert('QR scan failed: '+e)}};<\/script>`;
+      const html = `<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><title>Viewer</title><body><textarea id=o rows=4 style=width:100% placeholder='Paste offer token'></textarea><button id=p>Process</button><video id=v autoplay playsinline controls style='width:100%;background:#000;display:none'></video><textarea id=a rows=4 readonly style=width:100% placeholder='Answer token'></textarea><button id=c>Copy Answer</button><script>let pc;const o=document.getElementById('o'),a=document.getElementById('a'),v=document.getElementById('v');const d=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'='));return new Uint8Array([...b].map(c=>c.charCodeAt(0)))};const e=b=>{let x='';b.forEach(n=>x+=String.fromCharCode(n));return btoa(x).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'')};const uz=async b=>{if(!window.DecompressionStream)return null;const st=new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'));return new TextDecoder().decode(await new Response(st).arrayBuffer())};const dec=async t=>{const m=t[0],b=d(t.slice(1));if(m==='P')return JSON.parse(new TextDecoder().decode(b));if(m==='G'){const j=await uz(b);if(!j)throw new Error('Gzip decode unavailable');return JSON.parse(j);}throw new Error('Unknown token format');};p.onclick=async()=>{try{const payload=await dec(o.value.trim());const ofr=payload&&payload.o?payload.o:payload;pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0]){v.srcObject=e.streams[0];v.style.display='block';}};pc.onicecandidate=ev=>{if(!ev.candidate)a.value='P'+e(new TextEncoder().encode(JSON.stringify({a:pc.localDescription.sdp})))};await pc.setRemoteDescription(ofr);await pc.setLocalDescription(await pc.createAnswer());}catch(e){alert('Invalid offer token: '+e)}};c.onclick=async()=>a.value&&navigator.clipboard.writeText(a.value);<\/script>`;
       return `data:text/html,${encodeURIComponent(html)}`;
     }
 
@@ -240,7 +238,7 @@
           if (isOfferer) {
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
-            const offerToken = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
+            const offerToken = await encodeCompactPayload({ o: offerObj });
             offerTokenInput.value = offerToken;
 
             const viewerUrl = buildViewerDataUrl();
@@ -337,10 +335,15 @@
 
       let offerObj;
       try {
-        offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(token)));
+        const payload = await decodeCompactPayload(token);
+        offerObj = payload && payload.o ? payload.o : payload;
       } catch (e) {
-        alert(`Invalid offer token: ${e}`);
-        return;
+        try {
+          offerObj = JSON.parse(new TextDecoder().decode(b64urlDecode(token)));
+        } catch {
+          alert(`Invalid offer token: ${e}`);
+          return;
+        }
       }
 
       createPeerConnection(false);
@@ -385,34 +388,6 @@
       urlModeHint.textContent = 'Viewer mode enabled.';
     };
     processOfferBtn.onclick = () => processOfferInViewer();
-    scanOfferBtn.onclick = async () => {
-      if (!window.BarcodeDetector) {
-        alert('BarcodeDetector is not supported in this browser.');
-        return;
-      }
-      let stream;
-      let timer;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        const probeVideo = document.createElement('video');
-        probeVideo.playsInline = true;
-        probeVideo.srcObject = stream;
-        await probeVideo.play();
-        const detector = new BarcodeDetector({ formats: ['qr_code'] });
-        timer = setInterval(async () => {
-          const codes = await detector.detect(probeVideo);
-          if (codes[0] && codes[0].rawValue) {
-            viewerOfferToken.value = codes[0].rawValue.trim();
-            clearInterval(timer);
-            stream.getTracks().forEach((track) => track.stop());
-          }
-        }, 250);
-      } catch (e) {
-        if (timer) clearInterval(timer);
-        if (stream) stream.getTracks().forEach((track) => track.stop());
-        alert(`QR scan failed: ${e}`);
-      }
-    };
     applyAnswerBtn.onclick = () => applyResponseFromInputs();
 
     copyOfferTokenBtn.onclick = async () => {
