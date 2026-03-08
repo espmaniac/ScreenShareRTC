@@ -7,7 +7,7 @@
 ShareScreenRTC is a serverless WebRTC screen sharing page.
 
 - Start broadcast on computer.
-- Scan QR on phone to join.
+- Scan QR on phone to join (QR contains the normal website URL with `?mode=view&offer=...`).
 - Phone generates only one value: compact response token.
 - On computer, paste compact token, then apply it.
 
@@ -34,6 +34,6 @@ Both devices should be on the same Wi‑Fi/local network.
 
 - Uses `RTCPeerConnection({ iceServers: [] })` for local network behavior.
 - `server.py` is not needed in this workflow.
-- If QR image does not appear, use the shown Broadcast URL text directly.
+- If QR image does not appear, use the shown website URL text directly (not a base64 data URL).
 - To keep payloads small, SDP is reduced to minimal LAN candidates before encoding.
 - The phone page opened from QR is intentionally minimal: no CSS, only video stream + answer token output.
