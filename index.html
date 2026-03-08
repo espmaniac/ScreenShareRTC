@@ -176,7 +176,17 @@
       while (answerCodeMap.has(code)) code = createShortCode();
       answerCodeMap.set(code, sdp);
       saveAnswerCodeMap();
+      logSdpTable();
       return code;
+    }
+
+    function logSdpTable() {
+      const rows = [];
+      for (const [code, sdp] of answerCodeMap.entries()) {
+        rows.push({ code, sdpPreview: sdp.slice(0, 120) });
+      }
+      console.log('SDP code table (code -> answer SDP preview)');
+      console.table(rows);
     }
 
     function generateQR(container, value) {
@@ -278,11 +288,12 @@
     }
 
     function buildViewerDataUrl() {
-      const html = `<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><title>Viewer</title><body><textarea id=o rows=4 style=width:100% placeholder='Paste offer token'></textarea><button id=p>Process</button><video id=v autoplay playsinline controls style='width:100%;background:#000;display:none'></video><textarea id=a rows=4 readonly style=width:100% placeholder='Answer token'></textarea><button id=c>Copy Answer</button><script>let pc;const o=document.getElementById('o'),a=document.getElementById('a'),v=document.getElementById('v');const d=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'='));return new Uint8Array([...b].map(c=>c.charCodeAt(0)))};const e=b=>{let x='';b.forEach(n=>x+=String.fromCharCode(n));return btoa(x).split('+').join('-').split('/').join('_').replace(/=+$/g,'')};const gz=async t=>{if(!window.CompressionStream)return null;const st=new Blob([t]).stream().pipeThrough(new CompressionStream('gzip'));return new Uint8Array(await new Response(st).arrayBuffer())};const ugz=async b=>{if(!window.DecompressionStream)return null;const st=new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'));return new TextDecoder().decode(await new Response(st).arrayBuffer())};const enc=async p=>{const j=JSON.stringify(p);const g=await gz(j);if(g&&g.length<j.length)return 'G'+e(g);return 'P'+e(new TextEncoder().encode(j));};const dec=async t=>{if(!t||t.length<2)throw new Error('Invalid token');const m=t[0],b=d(t.slice(1));if(m==='P')return JSON.parse(new TextDecoder().decode(b));if(m==='G'){const j=await ugz(b);if(!j)throw new Error('Gzip decode unavailable');return JSON.parse(j);}throw new Error('Unknown token format');};p.onclick=async()=>{try{const t=o.value.trim();let ofr;try{const payload=await dec(t);ofr=payload&&payload.o?payload.o:payload;}catch{ofr=JSON.parse(new TextDecoder().decode(d(t)));}pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=x=>{if(x.streams&&x.streams[0]){v.srcObject=x.streams[0];v.style.display='block';}};pc.onicecandidate=async ev=>{if(!ev.candidate)a.value=await enc({a:pc.localDescription.sdp})};await pc.setRemoteDescription(ofr);await pc.setLocalDescription(await pc.createAnswer());}catch(err){alert('Invalid offer token: '+err)}};const cp=async t=>{if(!t)return;if(navigator.clipboard&&navigator.clipboard.writeText){try{await navigator.clipboard.writeText(t);return;}catch{}}const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch{}ta.remove();};c.onclick=()=>cp(a.value);<\/script>`;
+      const html = `<!doctype html><meta charset=utf-8><meta name=viewport content=width=device-width,initial-scale=1><title>Viewer</title><textarea id=o rows=4 style=width:100% placeholder='Offer token'></textarea><button id=p>Process</button><video id=v autoplay playsinline controls style='width:100%;background:#000;display:none'></video><textarea id=a rows=2 readonly style=width:100% placeholder='Answer code (5-6 chars)'></textarea><button id=c>Copy Code</button><script>let pc;const o=document.getElementById('o'),a=document.getElementById('a'),v=document.getElementById('v');const d=s=>{const b=atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'='));return new TextDecoder().decode(new Uint8Array([...b].map(x=>x.charCodeAt(0))))};const mk=()=>{const z='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=z[Math.floor(Math.random()*z.length)];return c};const k='ssrtc-answer-code-map-v1';const m=(()=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch{return{}}})();const save=()=>{try{localStorage.setItem(k,JSON.stringify(m))}catch{}};p.onclick=async()=>{try{const t=o.value.trim();let offer;try{const pl=JSON.parse(d(t.slice(1)));offer=pl&&pl.o?pl.o:pl}catch{offer=JSON.parse(d(t))}pc=new RTCPeerConnection({iceServers:[]});pc.ontrack=e=>{if(e.streams&&e.streams[0]){v.srcObject=e.streams[0];v.style.display='block'}};pc.onicecandidate=e=>{if(!e.candidate){const sdp=pc.localDescription.sdp;let code=Object.keys(m).find(x=>m[x]===sdp)||mk();while(m[code]&&m[code]!==sdp)code=mk();m[code]=sdp;save();a.value=code;console.log('Viewer SDP map entry',code,sdp)}};await pc.setRemoteDescription(offer);await pc.setLocalDescription(await pc.createAnswer())}catch(err){alert('Invalid offer token: '+err)}};c.onclick=async()=>{if(!a.value)return;try{await navigator.clipboard.writeText(a.value)}catch{}};<\/script>`;
       return `data:text/html,${encodeURIComponent(html)}`;
     }
 
     function createPeerConnection(isOfferer, stream = null) {
+
 
 
 
@@ -294,7 +305,7 @@
           if (isOfferer) {
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
-            const offerToken = await encodeCompactPayload({ o: offerObj });
+            const offerToken = `P${b64urlEncode(new TextEncoder().encode(JSON.stringify({ o: offerObj })) )}`;
             offerTokenInput.value = offerToken;
 
             const viewerUrl = buildViewerDataUrl();
@@ -428,7 +439,7 @@
         const code = normalizeShortCode(input);
         sdp = answerCodeMap.get(code) || '';
         if (!sdp) {
-          alert('Unknown short code on this device. Paste a full answer token to register it here.');
+          alert('Unknown short code on this device. Check console.table for known codes, or paste full answer token once to register.');
           return;
         }
         log(`Resolved short code ${code} to stored answer SDP.`);
@@ -483,6 +494,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       const url = new URL(location.href);
       loadAnswerCodeMap();
+      logSdpTable();
       setPageStateFromUrl(url);
       const offerParam = url.searchParams.get('offer');
       if (offerParam) viewerOfferToken.value = offerParam;
