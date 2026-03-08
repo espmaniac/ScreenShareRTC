@@ -37,3 +37,5 @@ Both devices should be on the same Wi‑Fi/local network.
 - Uses `RTCPeerConnection({ iceServers: [] })` for local network behavior.
 - The 6–8 character code is only a verifier; WebRTC still requires a compact answer token to complete connection.
 - `server.py` is not needed in this workflow.
+
+- If QR image does not appear (for example, CDN blocked), use the shown Broadcast URL code text directly.
