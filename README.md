@@ -39,3 +39,4 @@ Both devices should be on the same Wi‑Fi/local network.
 - `server.py` is not needed in this workflow.
 
 - If QR image does not appear (for example, CDN blocked), use the shown Broadcast URL code text directly.
+- To keep QR payloads small, SDP is reduced to minimal LAN candidates before encoding into URL/token.

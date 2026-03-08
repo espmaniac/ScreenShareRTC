@@ -200,6 +200,47 @@
       throw new Error('Unknown token format.');
     }
 
+
+    function slimSdpForLan(sdp) {
+      const lines = sdp.split('\n');
+      const out = [];
+      let sectionKey = 'session';
+      const keptBySection = new Set();
+
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+        if (!line) continue;
+
+        if (line.startsWith('m=')) {
+          sectionKey = line;
+          out.push(line);
+          continue;
+        }
+
+        if (line.startsWith('a=candidate:')) {
+          const normalized = ` ${line.toLowerCase()} `;
+          const preferred = normalized.includes(' udp ') && normalized.includes(' typ host ');
+          if (!keptBySection.has(sectionKey) && preferred) {
+            out.push(line);
+            keptBySection.add(sectionKey);
+          } else if (!keptBySection.has(sectionKey) && !normalized.includes(' tcp ')) {
+            out.push(line);
+            keptBySection.add(sectionKey);
+          }
+          continue;
+        }
+
+        if (line.startsWith('a=end-of-candidates')) {
+          if (keptBySection.has(sectionKey)) out.push(line);
+          continue;
+        }
+
+        out.push(line);
+      }
+
+      return `${out.join('\r\n')}\r\n`;
+    }
+
     function setPageStateFromUrl(url) {
       const mode = url.searchParams.get('mode');
       const code = url.searchParams.get('code');
@@ -234,7 +275,8 @@
       pc.onicecandidate = async (e) => {
         if (!e.candidate) {
           if (isOfferer) {
-            const offerObj = { type: pc.localDescription.type, sdp: pc.localDescription.sdp };
+            const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
+            const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
             const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
             const offerUrl = `${getSharePageUrlBase()}?mode=view&code=${currentSiteCode}&offer=${encodeURIComponent(offerEncoded)}`;
             history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
@@ -244,7 +286,8 @@
             broadcastUrlBlock.classList.remove('hidden');
             log(qrOk ? 'Offer ready. Scan QR from phone to join.' : 'Offer ready. QR unavailable; share the Broadcast URL code text.');
           } else {
-            const answerObj = { type: pc.localDescription.type, sdp: pc.localDescription.sdp };
+            const slimAnswerSdp = slimSdpForLan(pc.localDescription.sdp);
+            const answerObj = { type: pc.localDescription.type, sdp: slimAnswerSdp };
             const answerStr = JSON.stringify(answerObj);
             const responseCode = await shortCodeFromString(answerStr, 6);
             const payload = { c: currentSiteCode, r: responseCode, a: answerObj.sdp };
