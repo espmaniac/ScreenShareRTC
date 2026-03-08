@@ -284,6 +284,15 @@
       return url.toString();
     }
 
+    function buildViewUrl(code, offerEncoded = '') {
+      const base = getSharePageUrlBase();
+      if (offerEncoded) {
+        return `${base}?mode=view&code=${code}&offer=${encodeURIComponent(offerEncoded)}`;
+      }
+      return `${base}?mode=view&code=${code}`;
+    }
+
+
     function createPeerConnection(isOfferer, stream = null) {
       pc = new RTCPeerConnection({ iceServers: [] });
 
@@ -293,7 +302,7 @@
             const slimOfferSdp = slimSdpForLan(pc.localDescription.sdp);
             const offerObj = { type: pc.localDescription.type, sdp: slimOfferSdp };
             const offerEncoded = b64urlEncode(new TextEncoder().encode(JSON.stringify(offerObj)));
-            const offerUrl = `${getSharePageUrlBase()}?mode=view&code=${currentSiteCode}&offer=${encodeURIComponent(offerEncoded)}`;
+            const offerUrl = buildViewUrl(currentSiteCode, offerEncoded);
             history.replaceState({}, '', `${location.pathname}?mode=cast&code=${currentSiteCode}`);
             const qrOk = generateQR(qrboxOffer, offerUrl);
             qrOffer.classList.add('visible');
@@ -349,18 +358,26 @@
     }
 
     async function startBroadcast() {
+      currentSiteCode = randomCode(8);
+      siteCodeInput.value = currentSiteCode;
+
+      const earlyUrl = buildViewUrl(currentSiteCode);
+      broadcastUrlCode.value = earlyUrl;
+      broadcastUrlBlock.classList.remove('hidden');
+      qrOffer.classList.add('visible');
+      const earlyQrOk = generateQR(qrboxOffer, earlyUrl);
+      log(earlyQrOk
+        ? 'Broadcast link generated. Scan QR now; offer details will update automatically.'
+        : 'Broadcast link generated. QR unavailable, use Broadcast URL text.');
+
       try {
         localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
       } catch (e) {
         alert(`Failed to capture screen: ${e}`);
         return;
       }
-      currentSiteCode = randomCode(8);
-      siteCodeInput.value = currentSiteCode;
-      broadcastUrlCode.value = 'Generating broadcast URL...';
-      broadcastUrlBlock.classList.remove('hidden');
-      qrOffer.classList.add('visible');
-      qrboxOffer.innerHTML = '<div class="hint">Preparing QR...</div>';
+
+      qrboxOffer.innerHTML = '<div class="hint">Finalizing offer QR...</div>';
       createPeerConnection(true, localStream);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
